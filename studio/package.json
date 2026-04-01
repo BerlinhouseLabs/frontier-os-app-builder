@@ -1,0 +1,55 @@
+{
+  "name": "frontier-studio",
+  "version": "0.1.0",
+  "description": "Live preview companion for Frontier OS apps — run alongside Claude Code",
+  "author": "BerlinhouseLabs",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "frontier-studio": "./bin/studio.js"
+  },
+  "scripts": {
+    "dev": "tsx server/index.ts",
+    "build:server": "tsc -p tsconfig.json",
+    "build:client": "cd client && npx vite build",
+    "build": "npm run build:server && npm run build:client",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "README.md"
+  ],
+  "dependencies": {
+    "chokidar": "^4.0.0",
+    "open": "^10.1.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.0",
+    "@vitejs/plugin-react": "^5.1.2",
+    "postcss": "^8.5.6",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tailwindcss": "^4.1.18",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BerlinhouseLabs/frontier-os-app-builder.git",
+    "directory": "studio"
+  },
+  "keywords": [
+    "frontier-os",
+    "frontier-studio",
+    "live-preview",
+    "claude-code",
+    "app-builder"
+  ]
+}
