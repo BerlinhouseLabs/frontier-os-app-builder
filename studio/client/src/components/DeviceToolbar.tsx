@@ -9,10 +9,10 @@ interface DeviceToolbarProps {
   showMenuButton?: boolean;
 }
 
-const DEVICES: Array<{ mode: DeviceMode; label: string; width: string }> = [
-  { mode: 'desktop', label: 'Desktop', width: '100%' },
-  { mode: 'tablet', label: 'Tablet', width: '768px' },
-  { mode: 'mobile', label: 'Mobile', width: '375px' },
+const DEVICES: Array<{ mode: DeviceMode; label: string; width: string; shortcut: string }> = [
+  { mode: 'desktop', label: 'Desktop', width: '100%', shortcut: '1' },
+  { mode: 'tablet', label: 'Tablet', width: '768px', shortcut: '2' },
+  { mode: 'mobile', label: 'Mobile', width: '375px', shortcut: '3' },
 ];
 
 export function DeviceToolbar({ device, setDevice, devPort, onRefresh, onToggleSidebar, showMenuButton }: DeviceToolbarProps) {
@@ -30,7 +30,7 @@ export function DeviceToolbar({ device, setDevice, devPort, onRefresh, onToggleS
             </svg>
           </button>
         )}
-        {DEVICES.map(({ mode, label }) => (
+        {DEVICES.map(({ mode, label, shortcut }) => (
           <button
             key={mode}
             onClick={() => setDevice(mode)}
@@ -41,6 +41,7 @@ export function DeviceToolbar({ device, setDevice, devPort, onRefresh, onToggleS
             }`}
           >
             {label}
+            <span className="hidden md:inline text-gray-600 ml-1 text-xs font-mono">{shortcut}</span>
           </button>
         ))}
       </div>

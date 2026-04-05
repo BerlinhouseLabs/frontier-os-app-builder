@@ -47,6 +47,10 @@ export class ViteManager {
     }
   }
 
+  getBuffer(): string[] {
+    return [...this.stderrBuffer];
+  }
+
   canStart(): { ok: boolean; reason?: string } {
     if (!existsSync(join(this.appDir, 'package.json'))) {
       return { ok: false, reason: 'No package.json yet — waiting for scaffold' };

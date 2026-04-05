@@ -239,6 +239,9 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
         if (msg.type === 'restart-vite' && viteManager) {
           await viteManager.restart();
         }
+        if (msg.type === 'request-vite-logs' && viteManager) {
+          ws.send(JSON.stringify({ type: 'vite-logs', lines: viteManager.getBuffer() }));
+        }
       } catch {
         // ignore malformed messages
       }

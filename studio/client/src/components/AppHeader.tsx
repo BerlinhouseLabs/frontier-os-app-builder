@@ -9,6 +9,11 @@ export function AppHeader({ state }: { state: ProjectState }) {
         <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">
           {state.milestone}
         </span>
+        {state.sdkPhase != null && (
+          <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded">
+            SDK Phase {state.sdkPhase}
+          </span>
+        )}
       </div>
       <p className="text-sm text-gray-400 leading-relaxed">{state.description}</p>
       {state.coreValue && (

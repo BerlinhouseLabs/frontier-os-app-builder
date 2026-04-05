@@ -14,9 +14,10 @@ interface SidebarProps {
   errors: ParseError[];
   activities: ActivityEvent[];
   onRestartVite: () => void;
+  onShowLogs?: () => void;
 }
 
-export function Sidebar({ state, viteStatus, viteError, errors, activities, onRestartVite }: SidebarProps) {
+export function Sidebar({ state, viteStatus, viteError, errors, activities, onRestartVite, onShowLogs }: SidebarProps) {
   return (
     <aside className="w-80 h-full bg-gray-900 border-r border-gray-800 flex flex-col">
       {/* Logo */}
@@ -45,7 +46,7 @@ export function Sidebar({ state, viteStatus, viteError, errors, activities, onRe
 
       {/* Footer: Vite status */}
       <div className="px-4 py-3 border-t border-gray-800">
-        <ViteStatusIndicator status={viteStatus} error={viteError} onRestart={onRestartVite} />
+        <ViteStatusIndicator status={viteStatus} error={viteError} onRestart={onRestartVite} onShowLogs={onShowLogs} />
       </div>
     </aside>
   );

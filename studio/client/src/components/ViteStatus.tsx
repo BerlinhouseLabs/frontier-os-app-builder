@@ -11,9 +11,10 @@ interface Props {
   status: ViteStatusType;
   error: string | null;
   onRestart: () => void;
+  onShowLogs?: () => void;
 }
 
-export function ViteStatus({ status, error, onRestart }: Props) {
+export function ViteStatus({ status, error, onRestart, onShowLogs }: Props) {
   const config = VITE_CONFIG[status];
 
   return (
@@ -23,14 +24,24 @@ export function ViteStatus({ status, error, onRestart }: Props) {
           <span className={`w-2 h-2 rounded-full ${config.dot}`} />
           <span className="text-xs text-gray-400">{config.label}</span>
         </div>
-        {(status === 'stopped' || status === 'error') && (
-          <button
-            onClick={onRestart}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-          >
-            restart
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {status !== 'stopped' && onShowLogs && (
+            <button
+              onClick={onShowLogs}
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              logs
+            </button>
+          )}
+          {(status === 'stopped' || status === 'error') && (
+            <button
+              onClick={onRestart}
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              restart
+            </button>
+          )}
+        </div>
       </div>
       {error && status === 'error' && (
         <p className="text-xs text-amber-400/70 truncate" title={error}>

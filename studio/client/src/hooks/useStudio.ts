@@ -11,7 +11,11 @@ export interface StudioState {
   activities: ActivityEvent[];
   connected: boolean;
   waiting: boolean;
+  reconnectAttempt: number;
+  reconnectDelay: number;
   restartVite: () => void;
+  viteLogs: string[];
+  requestViteLogs: () => void;
 }
 
 export function useStudio(): StudioState {
@@ -20,8 +24,11 @@ export function useStudio(): StudioState {
   const [viteError, setViteError] = useState<string | null>(null);
   const [errors, setErrors] = useState<ParseError[]>([]);
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
+  const [viteLogs, setViteLogs] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
   const [waiting, setWaiting] = useState(true);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [reconnectDelay, setReconnectDelay] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const attemptRef = useRef(0);
@@ -33,7 +40,9 @@ export function useStudio(): StudioState {
 
     ws.onopen = () => {
       setConnected(true);
-      attemptRef.current = 0; // Reset backoff on successful connect
+      attemptRef.current = 0;
+      setReconnectAttempt(0);
+      setReconnectDelay(0);
     };
 
     ws.onmessage = (event) => {
@@ -64,6 +73,9 @@ export function useStudio(): StudioState {
               return prev;
             });
             break;
+          case 'vite-logs':
+            setViteLogs(msg.lines || []);
+            break;
         }
       } catch {
         // ignore malformed messages
@@ -76,6 +88,8 @@ export function useStudio(): StudioState {
       // Exponential backoff: 1s, 2s, 4s, 8s, 16s, cap at 30s
       const delay = Math.min(1000 * Math.pow(2, attemptRef.current), 30000);
       attemptRef.current++;
+      setReconnectAttempt(attemptRef.current);
+      setReconnectDelay(delay);
       reconnectRef.current = setTimeout(connect, delay);
     };
 
@@ -98,5 +112,11 @@ export function useStudio(): StudioState {
     }
   }, []);
 
-  return { state, viteStatus, viteError, errors, activities, connected, waiting, restartVite };
+  const requestViteLogs = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'request-vite-logs' }));
+    }
+  }, []);
+
+  return { state, viteStatus, viteError, errors, activities, connected, waiting, reconnectAttempt, reconnectDelay, restartVite, viteLogs, requestViteLogs };
 }
