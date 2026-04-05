@@ -1,6 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ProjectState, PhaseInfo, ParseError, PhaseDetail, PlanSummary } from '../shared/types.js';
+import matter from 'gray-matter';
+import type { ProjectState, PhaseInfo, ParseError, PhaseDetail } from '../shared/types.js';
 
 export type { ProjectState, ParseError };
 
@@ -9,49 +10,14 @@ export interface ParseResult {
   errors: ParseError[];
 }
 
-// Ported from fos-tools.cjs:72-114
-function parseFrontmatter(content: string): { frontmatter: Record<string, unknown>; body: string } {
+export function parseFrontmatter(content: string): { frontmatter: Record<string, unknown>; body: string } {
   if (!content) return { frontmatter: {}, body: '' };
-  const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
-  if (!match) return { frontmatter: {}, body: content };
-
-  const fm: Record<string, unknown> = {};
-  let currentKey: string | null = null;
-
-  for (const line of match[1].split('\n')) {
-    const kvMatch = line.match(/^(\w[\w_-]*)\s*:\s*(.*)$/);
-    if (kvMatch) {
-      const [, key, val] = kvMatch;
-      const trimmed = val.trim();
-      if (trimmed === '' || trimmed === '|') {
-        fm[key] = '';
-        currentKey = key;
-      } else if (trimmed === '[]') {
-        fm[key] = [];
-        currentKey = key;
-      } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-        fm[key] = trimmed.slice(1, -1).split(',').map(s => s.trim().replace(/^["']|["']$/g, ''));
-        currentKey = null;
-      } else if (trimmed === 'true') {
-        fm[key] = true; currentKey = null;
-      } else if (trimmed === 'false') {
-        fm[key] = false; currentKey = null;
-      } else if (/^\d+$/.test(trimmed)) {
-        fm[key] = parseInt(trimmed, 10); currentKey = null;
-      } else {
-        fm[key] = trimmed.replace(/^["']|["']$/g, '');
-        currentKey = null;
-      }
-    } else if (currentKey && line.match(/^\s+-\s+/)) {
-      const item = line.replace(/^\s+-\s+/, '').trim().replace(/^["']|["']$/g, '');
-      if (!Array.isArray(fm[currentKey])) fm[currentKey] = [];
-      (fm[currentKey] as string[]).push(item);
-    } else if (currentKey && line.match(/^\s+\S/)) {
-      fm[currentKey] = ((fm[currentKey] as string) || '') + (fm[currentKey] ? '\n' : '') + line.trimStart();
-    }
+  try {
+    const { data, content: body } = matter(content);
+    return { frontmatter: data as Record<string, unknown>, body };
+  } catch {
+    return { frontmatter: {}, body: content };
   }
-
-  return { frontmatter: fm, body: match[2] };
 }
 
 function normalizePhaseStatus(status: string): string {
@@ -67,7 +33,7 @@ async function readFileSafe(path: string): Promise<string | null> {
   }
 }
 
-function parseManifest(raw: string): Partial<ProjectState> {
+export function parseManifest(raw: string): Partial<ProjectState> {
   const m = JSON.parse(raw);
   return {
     name: m.name || '',
@@ -85,7 +51,7 @@ function parseManifest(raw: string): Partial<ProjectState> {
   };
 }
 
-function parseState(raw: string): Partial<ProjectState> {
+export function parseState(raw: string): Partial<ProjectState> {
   const { frontmatter: fm, body } = parseFrontmatter(raw);
 
   let progressPercent = 0;
@@ -110,7 +76,7 @@ function parseState(raw: string): Partial<ProjectState> {
   };
 }
 
-function parseRoadmap(raw: string): { planCounts: Record<number, { complete: number; total: number }> } {
+export function parseRoadmap(raw: string): { planCounts: Record<number, { complete: number; total: number }> } {
   const planCounts: Record<number, { complete: number; total: number }> = {};
 
   const tableRows = raw.match(/\|\s*\d+\.\s*.+?\|.+?\|.+?\|.+?\|/g);

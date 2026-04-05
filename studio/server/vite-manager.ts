@@ -22,7 +22,7 @@ export class ViteManager {
   private _status: ViteStatus = 'stopped';
   private _lastError: string | null = null;
   private stderrBuffer: string[] = [];
-  private readonly MAX_STDERR_LINES = 50;
+  private readonly MAX_STDERR_LINES = 200;
 
   constructor(opts: ViteManagerOptions) {
     this.appDir = opts.appDir;
@@ -123,7 +123,6 @@ export class ViteManager {
           this.stderrBuffer.shift();
         }
         // Strip ANSI escape codes before matching (Vite embeds them even with FORCE_COLOR=0)
-        // eslint-disable-next-line no-control-regex
         const clean = line.replace(/\x1b\[[0-9;]*m/g, '');
         const portMatch = clean.match(/localhost:(\d+)/);
         if (portMatch) {

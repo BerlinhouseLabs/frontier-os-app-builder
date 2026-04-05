@@ -1,13 +1,13 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, extname } from 'node:path';
-import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { parseProjectState, type ProjectState, type ParseError } from './parser.js';
 import { StateWatcher } from './watcher.js';
 import { ViteManager, type ViteStatus } from './vite-manager.js';
 import { ActivityTracker } from './activity.js';
+import type { ActivityEvent } from '../shared/types.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -122,9 +122,19 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
     await viteManager.start();
   }
 
-  // --- Activity event forwarding ---
+  // --- Activity event forwarding (batched) ---
+  let activityBatch: ActivityEvent[] = [];
+  let activityBatchTimer: ReturnType<typeof setTimeout> | null = null;
+
   activity.onEvent((events) => {
-    broadcast({ type: 'activity', events });
+    activityBatch.push(...events);
+    if (!activityBatchTimer) {
+      activityBatchTimer = setTimeout(() => {
+        broadcast({ type: 'activity', events: activityBatch });
+        activityBatch = [];
+        activityBatchTimer = null;
+      }, 100);
+    }
   });
 
   // --- File watcher ---
@@ -174,7 +184,7 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
       return;
     }
 
-    let filePath = url === '/' ? '/index.html' : url;
+    const filePath = url === '/' ? '/index.html' : url;
     const fullPath = join(clientDir, filePath);
 
     if (!fullPath.startsWith(clientDir)) {
@@ -254,6 +264,7 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
 
       resolve({
         close: async () => {
+          if (activityBatchTimer) clearTimeout(activityBatchTimer);
           await watcher.stop();
           if (viteManager) await viteManager.stop();
           wss.close();

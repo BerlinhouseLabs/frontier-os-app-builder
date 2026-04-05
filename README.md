@@ -92,6 +92,23 @@ Each command reads state from `.frontier-app/` on disk, does its work, writes up
 - **Frontier-specific verification** — checks CORS origins, iframe detection, standalone fallback, SDK permissions, dark theme
 - **Milestones** — iterative development with `/fos:new-milestone` for v2, v3, and beyond
 
+## Frontier Studio
+
+Frontier Studio is a live companion dashboard that runs alongside Claude Code. It watches your `.frontier-app/` state files and shows a visual dashboard with a live app preview in your browser.
+
+```bash
+cd your-app-directory
+npx frontier-studio
+```
+
+Opens `http://localhost:4983` with:
+
+- **Project dashboard** — phases, status, SDK modules, progress, next action
+- **Live preview** — your app rendered via Vite HMR in an iframe (desktop/tablet/mobile)
+- **Activity stream** — file changes, git commits, phase transitions in real time
+
+See [studio/README.md](./studio/README.md) for development details.
+
 ## SDK Coverage
 
 The framework has built-in knowledge of all 10 Frontier SDK modules:

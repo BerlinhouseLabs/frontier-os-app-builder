@@ -1,60 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { PhaseInfo, ParseError, PlanSummary, PhaseDetail, ProjectState, ActivityEvent, ViteStatus } from '@studio/shared/types';
 
-// Types duplicated from shared/types.ts for client-side (no shared module resolution in Vite)
-export interface PhaseInfo {
-  number: number;
-  name: string;
-  status: string;
-}
-
-export interface PlanSummary {
-  id: string;
-  objective: string;
-  taskCount: number;
-  status: 'pending' | 'complete';
-}
-
-export interface PhaseDetail {
-  decisions: string[];
-  plans: PlanSummary[];
-  summaries: string[];
-  verification: string | null;
-}
-
-export interface ParseError {
-  file: string;
-  message: string;
-}
-
-export interface ProjectState {
-  name: string;
-  description: string;
-  devPort: number;
-  modules: string[];
-  permissions: string[];
-  milestone: string;
-  sdkPhase: number | null | string;
-  phases: PhaseInfo[];
-  currentPhase: number;
-  currentPlan: number | string;
-  status: string;
-  nextAction: string;
-  progressPercent: number;
-  coreValue: string;
-  planCounts: Record<number, { complete: number; total: number }>;
-  phaseDetails: Record<number, PhaseDetail>;
-  phaseCount: number;
-  completedPhases: number;
-}
-
-export interface ActivityEvent {
-  timestamp: number;
-  type: 'file_created' | 'file_modified' | 'phase_changed' | 'status_changed' | 'git_commit' | 'vite_event';
-  message: string;
-  detail?: string;
-}
-
-export type ViteStatus = 'running' | 'starting' | 'stopped' | 'error';
+export type { PhaseInfo, ParseError, PlanSummary, PhaseDetail, ProjectState, ActivityEvent, ViteStatus };
 
 export interface StudioState {
   state: ProjectState | null;
@@ -76,7 +23,7 @@ export function useStudio(): StudioState {
   const [connected, setConnected] = useState(false);
   const [waiting, setWaiting] = useState(true);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const attemptRef = useRef(0);
 
   const connect = useCallback(() => {
