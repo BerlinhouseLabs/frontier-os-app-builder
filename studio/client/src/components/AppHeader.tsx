@@ -6,7 +6,7 @@ export function AppHeader({ state }: { state: ProjectState }) {
     <div className="space-y-2">
       <div className="flex items-start justify-between gap-2">
         <h1 className="text-lg font-bold text-white leading-tight">{state.name}</h1>
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">
+        <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">
           {state.milestone}
         </span>
       </div>

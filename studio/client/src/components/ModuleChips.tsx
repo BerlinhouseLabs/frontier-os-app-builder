@@ -33,14 +33,14 @@ export function ModuleChips({ state }: { state: ProjectState }) {
         {state.modules.map((mod) => (
           <span
             key={mod}
-            className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md border ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md border ${
               MODULE_COLORS[mod] || 'bg-gray-500/15 text-gray-400 border-gray-500/25'
             }`}
             title={permCounts[mod] ? `${permCounts[mod]} permission${permCounts[mod] > 1 ? 's' : ''}` : undefined}
           >
             {mod}
             {permCounts[mod] && (
-              <span className="text-[9px] opacity-60">{permCounts[mod]}</span>
+              <span className="text-xs opacity-60">{permCounts[mod]}</span>
             )}
           </span>
         ))}

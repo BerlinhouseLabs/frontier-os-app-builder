@@ -35,7 +35,7 @@ export function PreviewFrame({ devPort, viteStatus, viteError, device, refreshKe
             {viteStatus === 'error' ? 'Dev server encountered an error' : 'Dev server is not running'}
           </p>
           {viteError && (
-            <pre className="text-[11px] text-amber-400/80 bg-gray-800 rounded-lg p-3 text-left overflow-x-auto whitespace-pre-wrap">
+            <pre className="text-xs text-amber-400/80 bg-gray-800 rounded-lg p-3 text-left overflow-x-auto whitespace-pre-wrap">
               {viteError}
             </pre>
           )}

@@ -5,6 +5,8 @@ interface DeviceToolbarProps {
   setDevice: (d: DeviceMode) => void;
   devPort: number;
   onRefresh: () => void;
+  onToggleSidebar?: () => void;
+  showMenuButton?: boolean;
 }
 
 const DEVICES: Array<{ mode: DeviceMode; label: string; width: string }> = [
@@ -13,15 +15,26 @@ const DEVICES: Array<{ mode: DeviceMode; label: string; width: string }> = [
   { mode: 'mobile', label: 'Mobile', width: '375px' },
 ];
 
-export function DeviceToolbar({ device, setDevice, devPort, onRefresh }: DeviceToolbarProps) {
+export function DeviceToolbar({ device, setDevice, devPort, onRefresh, onToggleSidebar, showMenuButton }: DeviceToolbarProps) {
   return (
     <div className="flex items-center justify-between px-3 py-1.5 bg-gray-900 border-b border-gray-800">
       <div className="flex items-center gap-1">
+        {showMenuButton && (
+          <button
+            onClick={onToggleSidebar}
+            className="p-1 mr-1 text-gray-400 hover:text-gray-200 transition-colors"
+            title="Toggle sidebar"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        )}
         {DEVICES.map(({ mode, label }) => (
           <button
             key={mode}
             onClick={() => setDevice(mode)}
-            className={`px-2.5 py-1 text-[11px] rounded transition-colors ${
+            className={`px-2.5 py-1 text-xs rounded transition-colors ${
               device === mode
                 ? 'bg-gray-700 text-white'
                 : 'text-gray-500 hover:text-gray-300'

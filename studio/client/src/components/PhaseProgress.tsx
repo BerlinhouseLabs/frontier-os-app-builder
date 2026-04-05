@@ -22,14 +22,14 @@ function PhaseIcon({ phase, isCurrent }: { phase: PhaseInfo; isCurrent: boolean 
 
   return (
     <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-800 border border-gray-700">
-      <span className="text-[10px] text-gray-500 font-medium">{phase.number}</span>
+      <span className="text-xs text-gray-500 font-medium">{phase.number}</span>
     </div>
   );
 }
 
 function PhaseDetailPanel({ detail }: { detail: PhaseDetail }) {
   return (
-    <div className="ml-8 mt-1 mb-2 pl-3 border-l border-gray-700/50 space-y-2 text-[11px]">
+    <div className="ml-8 mt-1 mb-2 pl-3 border-l border-gray-700/50 space-y-2 text-xs">
       {detail.decisions.length > 0 && (
         <div>
           <p className="text-gray-500 font-medium mb-0.5">Decisions</p>
@@ -88,14 +88,14 @@ export function PhaseProgress({ state }: { state: ProjectState }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     {hasDetail && (
-                      <span className="text-[10px] text-gray-600">{isExpanded ? '▾' : '▸'}</span>
+                      <span className="text-xs text-gray-600">{isExpanded ? '▾' : '▸'}</span>
                     )}
                     <p className={`text-sm truncate ${isCurrent ? 'text-white font-medium' : 'text-gray-300'}`}>
                       {phase.name}
                     </p>
                   </div>
                   {planCount && (
-                    <p className="text-[10px] text-gray-500">
+                    <p className="text-xs text-gray-500">
                       {planCount.complete}/{planCount.total} plans
                     </p>
                   )}
@@ -109,7 +109,7 @@ export function PhaseProgress({ state }: { state: ProjectState }) {
 
       {/* Overall progress bar */}
       <div className="mt-3 px-2">
-        <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+        <div className="flex justify-between text-xs text-gray-500 mb-1">
           <span>{state.completedPhases}/{state.phaseCount} phases</span>
           <span>{state.progressPercent}%</span>
         </div>

@@ -26,14 +26,14 @@ export function ViteStatus({ status, error, onRestart }: Props) {
         {(status === 'stopped' || status === 'error') && (
           <button
             onClick={onRestart}
-            className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
           >
             restart
           </button>
         )}
       </div>
       {error && status === 'error' && (
-        <p className="text-[10px] text-amber-400/70 truncate" title={error}>
+        <p className="text-xs text-amber-400/70 truncate" title={error}>
           {error.split('\n')[0]}
         </p>
       )}

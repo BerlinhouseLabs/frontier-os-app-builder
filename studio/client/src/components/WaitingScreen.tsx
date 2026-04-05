@@ -67,18 +67,18 @@ function TemplateCard({ template }: { template: Template }) {
       <h3 className="text-sm font-semibold text-gray-200 group-hover:text-white">
         {template.name}
       </h3>
-      <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+      <p className="text-xs text-gray-500 mt-1 leading-relaxed">
         {template.description}
       </p>
       <div className="flex flex-wrap gap-1 mt-2">
         {template.modules.map(m => (
-          <span key={m} className="text-[9px] px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
+          <span key={m} className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
             {m}
           </span>
         ))}
       </div>
       {copied && (
-        <p className="text-[10px] text-green-400 mt-1.5">Command copied!</p>
+        <p className="text-xs text-green-400 mt-1.5">Command copied!</p>
       )}
     </button>
   );
@@ -108,7 +108,7 @@ export function WaitingScreen() {
           <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-3">
             Example apps you can build <span className="text-gray-600 normal-case font-normal">(click to copy command)</span>
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {TEMPLATES.map(t => (
               <TemplateCard key={t.name} template={t} />
             ))}
@@ -117,7 +117,7 @@ export function WaitingScreen() {
 
         {/* How it works */}
         <div className="text-center">
-          <p className="text-[11px] text-gray-600 leading-relaxed">
+          <p className="text-xs text-gray-600 leading-relaxed">
             Frontier Studio watches your project and shows real-time updates as Claude Code builds.
             <br />
             The workflow: <span className="text-gray-500">new-app</span> &rarr; <span className="text-gray-500">discuss</span> &rarr; <span className="text-gray-500">plan</span> &rarr; <span className="text-gray-500">execute</span> &rarr; <span className="text-gray-500">ship</span>

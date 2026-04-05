@@ -1,16 +1,27 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useStudio } from './hooks/useStudio';
 import { useToasts } from './hooks/useToasts';
+import { useMediaQuery } from './hooks/useMediaQuery';
 import { Sidebar } from './components/Sidebar';
 import { PreviewFrame } from './components/PreviewFrame';
 import { DeviceToolbar, type DeviceMode } from './components/DeviceToolbar';
 import { ToastContainer } from './components/ToastContainer';
 import { WaitingScreen } from './components/WaitingScreen';
 
+const DEVICE_STORAGE_KEY = 'studio-device';
+
+function getInitialDevice(): DeviceMode {
+  const stored = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (stored === 'desktop' || stored === 'tablet' || stored === 'mobile') return stored;
+  return 'desktop';
+}
+
 export function App() {
   const { state, viteStatus, viteError, errors, activities, connected, waiting, restartVite } = useStudio();
   const { toasts, addToast, dismissToast } = useToasts();
-  const [device, setDevice] = useState<DeviceMode>('desktop');
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [device, setDevice] = useState<DeviceMode>(getInitialDevice);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Track previous values for toast triggers
@@ -21,6 +32,21 @@ export function App() {
   const handleRefresh = useCallback(() => {
     setRefreshKey(k => k + 1);
   }, []);
+
+  const handleSetDevice = useCallback((d: DeviceMode) => {
+    setDevice(d);
+    localStorage.setItem(DEVICE_STORAGE_KEY, d);
+  }, []);
+
+  // Close sidebar on Escape
+  useEffect(() => {
+    if (isDesktop || !sidebarOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isDesktop, sidebarOpen]);
 
   // Toast triggers on state changes
   useEffect(() => {
@@ -77,23 +103,48 @@ export function App() {
     );
   }
 
+  const sidebarProps = {
+    state,
+    viteStatus,
+    viteError,
+    errors,
+    activities,
+    onRestartVite: restartVite,
+  };
+
   // Main layout
   return (
     <div className="h-screen flex bg-gray-950">
-      <Sidebar
-        state={state}
-        viteStatus={viteStatus}
-        viteError={viteError}
-        errors={errors}
-        activities={activities}
-        onRestartVite={restartVite}
-      />
+      {/* Desktop sidebar — normal flex child */}
+      {isDesktop && <Sidebar {...sidebarProps} />}
+
+      {/* Mobile sidebar — fixed overlay with backdrop */}
+      {!isDesktop && (
+        <>
+          <div
+            className={`fixed inset-0 z-30 bg-black/50 transition-opacity duration-300 ${
+              sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div
+            className={`fixed inset-y-0 left-0 z-40 w-80 transition-transform duration-300 ease-in-out ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <Sidebar {...sidebarProps} />
+          </div>
+        </>
+      )}
+
       <main className="flex-1 h-full flex flex-col">
         <DeviceToolbar
           device={device}
-          setDevice={setDevice}
+          setDevice={handleSetDevice}
           devPort={state.devPort}
           onRefresh={handleRefresh}
+          onToggleSidebar={() => setSidebarOpen(o => !o)}
+          showMenuButton={!isDesktop}
         />
         <div className="flex-1">
           <PreviewFrame
