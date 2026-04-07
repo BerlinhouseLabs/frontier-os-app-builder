@@ -5,12 +5,31 @@ export interface ToastItem {
   message: string;
   type: 'success' | 'info' | 'warning';
   timestamp: number;
+  exiting?: boolean;
 }
 
 export function useToasts() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const counterRef = useRef(0);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const exitTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const startExit = useCallback((id: string) => {
+    // Mark as exiting for animation
+    setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t));
+    // Clear auto-expire timer
+    const autoTimer = timersRef.current.get(id);
+    if (autoTimer) {
+      clearTimeout(autoTimer);
+      timersRef.current.delete(id);
+    }
+    // Remove after exit animation completes
+    const exitTimer = setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+      exitTimersRef.current.delete(id);
+    }, 300);
+    exitTimersRef.current.set(id, exitTimer);
+  }, []);
 
   const addToast = useCallback((message: string, type: ToastItem['type'] = 'info') => {
     const id = `toast-${++counterRef.current}`;
@@ -25,27 +44,21 @@ export function useToasts() {
 
     // Auto-dismiss after 5 seconds
     const timer = setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      startExit(id);
       timersRef.current.delete(id);
     }, 5000);
     timersRef.current.set(id, timer);
-  }, []);
+  }, [startExit]);
 
   const dismissToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-    const timer = timersRef.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timersRef.current.delete(id);
-    }
-  }, []);
+    startExit(id);
+  }, [startExit]);
 
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      for (const timer of timersRef.current.values()) {
-        clearTimeout(timer);
-      }
+      for (const timer of timersRef.current.values()) clearTimeout(timer);
+      for (const timer of exitTimersRef.current.values()) clearTimeout(timer);
     };
   }, []);
 

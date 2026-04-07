@@ -21,7 +21,9 @@ export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
         return (
           <div
             key={toast.id}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${style.bg} animate-in slide-in-from-right duration-300 shadow-lg`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${style.bg} shadow-lg transition-all duration-300 ${
+              toast.exiting ? 'opacity-0 translate-x-full' : 'animate-in slide-in-from-right'
+            }`}
           >
             <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d={style.icon} />

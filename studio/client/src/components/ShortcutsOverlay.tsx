@@ -2,10 +2,8 @@ import { useEffect, useRef } from 'react';
 
 const SHORTCUTS = [
   { key: '\u2318K', description: 'Command palette' },
-  { key: '1', description: 'Switch to Desktop' },
-  { key: '2', description: 'Switch to Tablet' },
-  { key: '3', description: 'Switch to Mobile' },
   { key: 'r', description: 'Refresh preview' },
+  { key: 't', description: 'Toggle terminal' },
   { key: 'l', description: 'Toggle dev server logs' },
   { key: 's', description: 'Toggle sidebar (mobile)' },
   { key: 'Esc', description: 'Close topmost overlay' },

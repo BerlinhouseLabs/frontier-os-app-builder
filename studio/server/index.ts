@@ -7,6 +7,7 @@ import { parseProjectState, type ProjectState, type ParseError } from './parser.
 import { StateWatcher } from './watcher.js';
 import { ViteManager, type ViteStatus } from './vite-manager.js';
 import { ActivityTracker } from './activity.js';
+import { PtyManager } from './pty-manager.js';
 import type { ActivityEvent } from '../shared/types.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -211,10 +212,14 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
   });
 
   // --- WebSocket server ---
-  const wss = new WebSocketServer({ server, maxPayload: 64 * 1024 });
+  // 1MB max payload — large enough for terminal paste / output bursts.
+  const wss = new WebSocketServer({ server, maxPayload: 1024 * 1024 });
 
   wss.on('connection', (ws) => {
     clients.add(ws);
+
+    // One PTY per ws connection, lazily started on first 'pty-start' message.
+    let pty: PtyManager | null = null;
 
     // Send current state
     if (currentState) {
@@ -242,6 +247,45 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
         if (msg.type === 'request-vite-logs' && viteManager) {
           ws.send(JSON.stringify({ type: 'vite-logs', lines: viteManager.getBuffer() }));
         }
+        if (msg.type === 'pty-start') {
+          if (pty) return;
+          pty = new PtyManager({
+            appDir,
+            cols: typeof msg.cols === 'number' ? msg.cols : 80,
+            rows: typeof msg.rows === 'number' ? msg.rows : 24,
+            onData: (data) => {
+              if (ws.readyState === ws.OPEN) {
+                ws.send(JSON.stringify({ type: 'pty-data', data }));
+              }
+            },
+            onExit: (code, signal) => {
+              if (ws.readyState === ws.OPEN) {
+                ws.send(JSON.stringify({ type: 'pty-exit', code, signal }));
+              }
+              pty = null;
+            },
+          });
+          try {
+            const info = pty.start();
+            ws.send(JSON.stringify({ type: 'pty-started', command: info.command, args: info.args }));
+          } catch (err) {
+            ws.send(JSON.stringify({
+              type: 'pty-error',
+              message: err instanceof Error ? err.message : String(err),
+            }));
+            pty = null;
+          }
+        }
+        if (msg.type === 'pty-input' && pty && typeof msg.data === 'string') {
+          pty.write(msg.data);
+        }
+        if (msg.type === 'pty-resize' && pty) {
+          pty.resize(Number(msg.cols) || 80, Number(msg.rows) || 24);
+        }
+        if (msg.type === 'pty-kill' && pty) {
+          pty.kill();
+          pty = null;
+        }
       } catch {
         // ignore malformed messages
       }
@@ -249,6 +293,10 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
 
     ws.on('close', () => {
       clients.delete(ws);
+      if (pty) {
+        pty.kill();
+        pty = null;
+      }
     });
   });
 

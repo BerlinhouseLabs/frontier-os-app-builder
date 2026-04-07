@@ -88,9 +88,17 @@ export function PhaseProgress({ state }: { state: ProjectState }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     {hasDetail && (
-                      <span className="text-xs text-gray-600">{isExpanded ? '▾' : '▸'}</span>
+                      <svg
+                        className={`w-3 h-3 text-gray-500 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
                     )}
-                    <p className={`text-sm truncate ${isCurrent ? 'text-white font-medium' : 'text-gray-300'}`}>
+                    <p className={`text-sm truncate ${isCurrent ? 'text-white font-medium' : 'text-gray-300'}`} title={phase.name}>
                       {phase.name}
                     </p>
                   </div>
@@ -101,7 +109,15 @@ export function PhaseProgress({ state }: { state: ProjectState }) {
                   )}
                 </div>
               </div>
-              {isExpanded && detail && <PhaseDetailPanel detail={detail} />}
+              {hasDetail && (
+                <div className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+                  isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                }`}>
+                  <div className="overflow-hidden">
+                    {detail && <PhaseDetailPanel detail={detail} />}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

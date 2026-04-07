@@ -5,31 +5,23 @@ import { useMediaQuery } from './hooks/useMediaQuery';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { Sidebar } from './components/Sidebar';
 import { PreviewFrame } from './components/PreviewFrame';
-import { DeviceToolbar, type DeviceMode } from './components/DeviceToolbar';
 import { ToastContainer } from './components/ToastContainer';
 import { WaitingScreen } from './components/WaitingScreen';
 import { ShortcutsOverlay } from './components/ShortcutsOverlay';
 import { CommandPalette, type PaletteAction } from './components/CommandPalette';
 import { ViteLogViewer } from './components/ViteLogViewer';
-
-const DEVICE_STORAGE_KEY = 'studio-device';
-
-function getInitialDevice(): DeviceMode {
-  const stored = localStorage.getItem(DEVICE_STORAGE_KEY);
-  if (stored === 'desktop' || stored === 'tablet' || stored === 'mobile') return stored;
-  return 'desktop';
-}
+import { TerminalPane } from './components/TerminalPane';
 
 export function App() {
   const { state, viteStatus, viteError, errors, activities, connected, waiting, reconnectAttempt, reconnectDelay, restartVite, viteLogs, requestViteLogs } = useStudio();
   const { toasts, addToast, dismissToast } = useToasts();
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [device, setDevice] = useState<DeviceMode>(getInitialDevice);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
+  const [showTerminal, setShowTerminal] = useState(true);
 
   // Track previous values for toast triggers
   const prevStatusRef = useRef<string | null>(null);
@@ -40,20 +32,13 @@ export function App() {
     setRefreshKey(k => k + 1);
   }, []);
 
-  const handleSetDevice = useCallback((d: DeviceMode) => {
-    setDevice(d);
-    localStorage.setItem(DEVICE_STORAGE_KEY, d);
-  }, []);
-
   // Keyboard shortcuts
   const shortcuts = useMemo(() => ({
-    '1': () => handleSetDevice('desktop'),
-    '2': () => handleSetDevice('tablet'),
-    '3': () => handleSetDevice('mobile'),
     'r': () => handleRefresh(),
     's': () => { if (!isDesktop) setSidebarOpen(o => !o); },
     '?': () => setShowHelp(v => !v),
     'l': () => { setShowLogs(v => { if (!v) requestViteLogs(); return !v; }); },
+    't': () => setShowTerminal(v => !v),
     'k': { handler: () => setShowPalette(v => !v), meta: true },
     'Escape': () => {
       if (showPalette) { setShowPalette(false); return; }
@@ -61,7 +46,7 @@ export function App() {
       if (showHelp) { setShowHelp(false); return; }
       if (sidebarOpen && !isDesktop) setSidebarOpen(false);
     },
-  }), [handleSetDevice, handleRefresh, isDesktop, sidebarOpen, showPalette, showLogs, showHelp, requestViteLogs]);
+  }), [handleRefresh, isDesktop, sidebarOpen, showPalette, showLogs, showHelp, requestViteLogs]);
 
   useKeyboardShortcuts(shortcuts);
 
@@ -96,6 +81,39 @@ export function App() {
     }
     prevViteRef.current = viteStatus;
   }, [viteStatus, addToast]);
+
+  const handleShowLogs = useCallback(() => {
+    setShowLogs(true);
+    requestViteLogs();
+  }, [requestViteLogs]);
+
+  // Command palette actions
+  const paletteActions: PaletteAction[] = useMemo(() => {
+    const actions: PaletteAction[] = [
+      { id: 'refresh', label: 'Refresh Preview', shortcut: 'R', action: handleRefresh },
+      { id: 'restart-vite', label: 'Restart Dev Server', action: restartVite },
+      { id: 'toggle-terminal', label: 'Toggle Terminal', shortcut: 'T', action: () => setShowTerminal(v => !v) },
+      { id: 'shortcuts', label: 'Keyboard Shortcuts', shortcut: '?', action: () => setShowHelp(true) },
+    ];
+    if (state?.devPort) {
+      actions.push({
+        id: 'open-tab',
+        label: 'Open in New Tab',
+        action: () => window.open(`http://localhost:${state.devPort}`, '_blank'),
+      });
+    }
+    if (state?.nextAction) {
+      actions.push({
+        id: 'copy-next',
+        label: 'Copy Next Action',
+        action: () => navigator.clipboard.writeText(state.nextAction),
+      });
+    }
+    if (!isDesktop) {
+      actions.push({ id: 'sidebar', label: 'Toggle Sidebar', shortcut: 'S', action: () => setSidebarOpen(o => !o) });
+    }
+    return actions;
+  }, [handleRefresh, restartVite, state?.devPort, state?.nextAction, isDesktop]);
 
   // Dynamic favicon + tab title
   useEffect(() => {
@@ -147,11 +165,6 @@ export function App() {
     );
   }
 
-  const handleShowLogs = useCallback(() => {
-    setShowLogs(true);
-    requestViteLogs();
-  }, [requestViteLogs]);
-
   const sidebarProps = {
     state,
     viteStatus,
@@ -162,33 +175,9 @@ export function App() {
     onShowLogs: handleShowLogs,
   };
 
-  // Command palette actions
-  const paletteActions: PaletteAction[] = useMemo(() => {
-    const actions: PaletteAction[] = [
-      { id: 'desktop', label: 'Switch to Desktop', shortcut: '1', action: () => handleSetDevice('desktop') },
-      { id: 'tablet', label: 'Switch to Tablet', shortcut: '2', action: () => handleSetDevice('tablet') },
-      { id: 'mobile', label: 'Switch to Mobile', shortcut: '3', action: () => handleSetDevice('mobile') },
-      { id: 'refresh', label: 'Refresh Preview', shortcut: 'R', action: handleRefresh },
-      { id: 'restart-vite', label: 'Restart Dev Server', action: restartVite },
-      { id: 'open-tab', label: 'Open in New Tab', action: () => window.open(`http://localhost:${state.devPort}`, '_blank') },
-      { id: 'shortcuts', label: 'Keyboard Shortcuts', shortcut: '?', action: () => setShowHelp(true) },
-    ];
-    if (state.nextAction) {
-      actions.push({
-        id: 'copy-next',
-        label: 'Copy Next Action',
-        action: () => navigator.clipboard.writeText(state.nextAction),
-      });
-    }
-    if (!isDesktop) {
-      actions.push({ id: 'sidebar', label: 'Toggle Sidebar', shortcut: 'S', action: () => setSidebarOpen(o => !o) });
-    }
-    return actions;
-  }, [handleSetDevice, handleRefresh, restartVite, state.devPort, state.nextAction, isDesktop]);
-
   const isReconnecting = !connected && !!state;
 
-  // Main layout
+  // Main layout — 3 columns: sidebar | preview (mobile only) | terminal
   return (
     <div className="h-screen flex bg-gray-950">
       {/* Reconnection banner */}
@@ -199,7 +188,7 @@ export function App() {
       )}
 
       <div className={`flex flex-1 h-full ${isReconnecting ? 'opacity-60 pointer-events-none' : ''}`}>
-        {/* Desktop sidebar — normal flex child */}
+        {/* LEFT: Sidebar / progress — desktop normal flex child */}
         {isDesktop && <Sidebar {...sidebarProps} />}
 
         {/* Mobile sidebar — fixed overlay with backdrop */}
@@ -221,26 +210,69 @@ export function App() {
           </>
         )}
 
-        <main className="flex-1 h-full flex flex-col">
-          <DeviceToolbar
-            device={device}
-            setDevice={handleSetDevice}
-            devPort={state.devPort}
-            onRefresh={handleRefresh}
-            onToggleSidebar={() => setSidebarOpen(o => !o)}
-            showMenuButton={!isDesktop}
-          />
-          <div className="flex-1">
+        {/* MIDDLE: Phone preview */}
+        <main className="flex-1 h-full flex flex-col min-w-0">
+          <div className="flex items-center justify-between px-3 py-1.5 bg-gray-900 border-b border-gray-800">
+            <div className="flex items-center gap-2">
+              {!isDesktop && (
+                <button
+                  onClick={() => setSidebarOpen(o => !o)}
+                  className="p-1 text-gray-400 hover:text-gray-200 transition-colors"
+                  title="Toggle sidebar"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              )}
+              <span className="text-xs text-gray-500 font-mono">localhost:{state.devPort}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                className="text-gray-500 hover:text-gray-300 transition-colors"
+                title="Refresh preview (R)"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+              <button
+                onClick={() => window.open(`http://localhost:${state.devPort}`, '_blank')}
+                className="text-gray-500 hover:text-gray-300 transition-colors"
+                title="Open in new tab"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setShowTerminal(v => !v)}
+                className={`text-xs px-2 py-0.5 rounded transition-colors ${showTerminal ? 'text-gray-300 bg-gray-800' : 'text-gray-500 hover:text-gray-300'}`}
+                title="Toggle terminal (T)"
+              >
+                Terminal
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0">
             <PreviewFrame
               devPort={state.devPort}
               viteStatus={viteStatus}
               viteError={viteError}
-              device={device}
+              device="mobile"
               refreshKey={refreshKey}
               errors={errors}
             />
           </div>
         </main>
+
+        {/* RIGHT: Claude Code terminal */}
+        {showTerminal && isDesktop && (
+          <aside className="w-[480px] shrink-0 h-full border-l border-gray-800">
+            <TerminalPane visible={showTerminal} />
+          </aside>
+        )}
       </div>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       {showHelp && <ShortcutsOverlay onClose={() => setShowHelp(false)} />}
