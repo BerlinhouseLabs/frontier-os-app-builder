@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import type { ViteStatus, ParseError } from '../hooks/useStudio';
 import type { DeviceMode } from './DeviceToolbar';
 
@@ -16,6 +16,33 @@ const DEVICE_WIDTHS: Record<DeviceMode, number | null> = {
   tablet: 768,
   mobile: 375,
 };
+
+/**
+ * iPhone-ish bezel + Dynamic Island around the preview iframe.
+ * Decorative side buttons, rounded body, screen with subtle inset.
+ */
+function PhoneFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative bg-gray-950 rounded-[2.75rem] p-[10px] shadow-[0_24px_60px_-15px_rgba(0,0,0,0.8)] ring-1 ring-gray-700/60">
+      {/* Side buttons (decorative) */}
+      <div className="absolute -left-[3px] top-24 w-[3px] h-7 bg-gray-700 rounded-l-sm" />
+      <div className="absolute -left-[3px] top-36 w-[3px] h-12 bg-gray-700 rounded-l-sm" />
+      <div className="absolute -left-[3px] top-52 w-[3px] h-12 bg-gray-700 rounded-l-sm" />
+      <div className="absolute -right-[3px] top-32 w-[3px] h-16 bg-gray-700 rounded-r-sm" />
+
+      {/* Screen */}
+      <div className="relative rounded-[2.25rem] overflow-hidden bg-black ring-1 ring-gray-800">
+        {children}
+
+        {/* Dynamic Island */}
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-[110px] h-[30px] bg-black rounded-full z-10 pointer-events-none ring-1 ring-gray-900" />
+
+        {/* Home indicator */}
+        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-[110px] h-1 bg-white/40 rounded-full z-10 pointer-events-none" />
+      </div>
+    </div>
+  );
+}
 
 export function PreviewFrame({ devPort, viteStatus, viteError, device, refreshKey, errors = [] }: PreviewFrameProps) {
   const [dismissed, setDismissed] = useState(false);
@@ -62,19 +89,20 @@ export function PreviewFrame({ devPort, viteStatus, viteError, device, refreshKe
   const width = DEVICE_WIDTHS[device];
   const showOverlay = viteStatus === 'running' && errors.length > 0 && !dismissed;
 
+  const iframe = (
+    <iframe
+      key={refreshKey}
+      src={`http://localhost:${devPort}`}
+      className={width ? 'block bg-white border-0' : 'w-full h-full border-0'}
+      style={width ? { width: `${width}px`, height: device === 'mobile' ? '812px' : '1024px' } : undefined}
+      title="App Preview"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+    />
+  );
+
   return (
-    <div className={`h-full relative ${width ? 'flex items-start justify-center bg-gray-950 p-4 overflow-auto' : ''}`}>
-      <iframe
-        key={refreshKey}
-        src={`http://localhost:${devPort}`}
-        className={width
-          ? 'border border-gray-700 rounded-lg shadow-2xl bg-white'
-          : 'w-full h-full border-0'
-        }
-        style={width ? { width: `${width}px`, height: device === 'mobile' ? '812px' : '1024px' } : undefined}
-        title="App Preview"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-      />
+    <div className={`h-full relative ${width ? 'flex items-start justify-center bg-gray-950 p-6 overflow-auto' : ''}`}>
+      {device === 'mobile' && width ? <PhoneFrame>{iframe}</PhoneFrame> : iframe}
       {showOverlay && (
         <div className="absolute bottom-0 inset-x-0 z-10 bg-red-950/90 backdrop-blur-sm border-t border-red-500/30">
           <div

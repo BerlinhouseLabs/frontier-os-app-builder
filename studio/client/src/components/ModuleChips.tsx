@@ -47,7 +47,6 @@ export function ModuleChips({ state }: { state: ProjectState }) {
 
   return (
     <div className="space-y-2">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">SDK Modules</h2>
       <div className="flex flex-wrap gap-1.5">
         {state.modules.map((mod) => (
           <span

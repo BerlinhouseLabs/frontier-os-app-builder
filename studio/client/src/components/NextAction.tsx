@@ -18,7 +18,6 @@ export function NextAction({ state }: { state: ProjectState }) {
 
   return (
     <div className="space-y-1.5">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Next Step</h2>
       <button
         onClick={handleCopy}
         className="w-full text-left bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2 cursor-pointer hover:bg-blue-500/20 transition-colors group"

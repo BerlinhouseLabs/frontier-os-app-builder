@@ -47,11 +47,17 @@ function formatTime(timestamp: number): string {
   return `${Math.floor(diff / 3600)}h`;
 }
 
-export function ActivityStream({ activities }: { activities: ActivityEvent[] }) {
+interface ActivityStreamProps {
+  activities: ActivityEvent[];
+  showFilters?: boolean;
+}
+
+export function ActivityStream({ activities, showFilters = false }: ActivityStreamProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const [hiddenGroups, setHiddenGroups] = useState<Set<FilterGroup>>(loadHiddenFilters);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Re-render every 15s so formatTime() stays fresh
   const [, setTick] = useState(0);
@@ -95,60 +101,56 @@ export function ActivityStream({ activities }: { activities: ActivityEvent[] }) 
     }
   }, [activities.length]);
 
-  const [searchQuery, setSearchQuery] = useState('');
-
   const filtered = activities.slice(-50)
     .filter(e => !hiddenTypes.has(e.type))
     .filter(e => !searchQuery || e.message.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      {/* Filter pills + search */}
-      <div className="flex gap-1 px-3 py-1.5 flex-wrap items-center shrink-0">
-        {FILTER_GROUPS.map((group) => {
-          const active = !hiddenGroups.has(group.key);
-          return (
-            <button
-              key={group.key}
-              onClick={() => toggleFilter(group.key)}
-              className={`text-xs px-1.5 py-0.5 rounded font-mono transition-colors ${
-                active ? group.activeClass : 'bg-gray-800 text-gray-600'
-              }`}
-            >
-              {group.icon} {group.label}
-            </button>
-          );
-        })}
-        <div className="relative ml-auto flex items-center">
-          <input
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent border-b border-gray-700 text-xs text-gray-300 px-1 py-0.5 w-24 focus:w-40 transition-all outline-none placeholder-gray-600"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-0 text-gray-500 hover:text-gray-300 text-xs px-1"
-            >
-              x
-            </button>
-          )}
+    <div className="flex flex-col min-h-0">
+      {/* Filter pills + search — hidden by default; reveal via parent */}
+      {showFilters && (
+        <div className="flex gap-1 pb-1.5 flex-wrap items-center shrink-0">
+          {FILTER_GROUPS.map((group) => {
+            const active = !hiddenGroups.has(group.key);
+            return (
+              <button
+                key={group.key}
+                onClick={() => toggleFilter(group.key)}
+                className={`text-xs px-1.5 py-0.5 rounded font-mono transition-colors ${
+                  active ? group.activeClass : 'bg-gray-800 text-gray-600'
+                }`}
+              >
+                {group.icon} {group.label}
+              </button>
+            );
+          })}
+          <div className="relative ml-auto flex items-center">
+            <input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent border-b border-gray-700 text-xs text-gray-300 px-1 py-0.5 w-24 focus:w-40 transition-all outline-none placeholder-gray-600"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-0 text-gray-500 hover:text-gray-300 text-xs px-1"
+              >
+                x
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {activities.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center px-4">
-          <p className="text-xs text-gray-600 text-center">
-            Activity will appear here as Claude Code works...
-          </p>
-        </div>
+        <p className="text-xs text-gray-600 italic px-1 py-2">
+          Waiting for Claude Code to work...
+        </p>
       ) : filtered.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center px-4">
-          <p className="text-xs text-gray-600 text-center">No matches</p>
-        </div>
+        <p className="text-xs text-gray-600 italic px-1 py-2">No matches</p>
       ) : (
-        <div ref={containerRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+        <div ref={containerRef} className="max-h-64 overflow-y-auto space-y-0.5">
           {filtered.map((event, i) => (
             <div key={i} className="flex items-start gap-1.5 text-xs leading-relaxed animate-in fade-in">
               <span className="text-gray-600 w-6 text-right shrink-0 font-mono">

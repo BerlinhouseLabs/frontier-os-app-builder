@@ -67,10 +67,10 @@ export function PhaseProgress({ state }: { state: ProjectState }) {
 
   return (
     <div className="space-y-1">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Phases</h2>
       <div className="space-y-0.5">
         {state.phases.map((phase) => {
           const isCurrent = phase.number === state.currentPhase;
+          const isComplete = phase.status === 'complete';
           const planCount = state.planCounts[phase.number];
           const detail = state.phaseDetails?.[phase.number];
           const isExpanded = expanded === phase.number;
@@ -79,7 +79,7 @@ export function PhaseProgress({ state }: { state: ProjectState }) {
           return (
             <div key={phase.number}>
               <div
-                className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors ${
+                className={`flex items-center gap-2.5 px-2 py-1 rounded-lg transition-colors ${
                   isCurrent ? 'bg-gray-800/80' : 'hover:bg-gray-800/40'
                 } ${hasDetail ? 'cursor-pointer' : ''}`}
                 onClick={() => hasDetail && setExpanded(isExpanded ? null : phase.number)}
@@ -102,7 +102,7 @@ export function PhaseProgress({ state }: { state: ProjectState }) {
                       {phase.name}
                     </p>
                   </div>
-                  {planCount && (
+                  {planCount && !isComplete && (
                     <p className="text-xs text-gray-500">
                       {planCount.complete}/{planCount.total} plans
                     </p>
@@ -124,12 +124,12 @@ export function PhaseProgress({ state }: { state: ProjectState }) {
       </div>
 
       {/* Overall progress bar */}
-      <div className="mt-3 px-2">
+      <div className="mt-2 px-2">
         <div className="flex justify-between text-xs text-gray-500 mb-1">
           <span>{state.completedPhases}/{state.phaseCount} phases</span>
           <span>{state.progressPercent}%</span>
         </div>
-        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+        <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full transition-all duration-500"
             style={{ width: `${state.progressPercent}%` }}
