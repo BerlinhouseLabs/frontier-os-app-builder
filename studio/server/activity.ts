@@ -20,6 +20,11 @@ export class ActivityTracker {
     return this.events.slice(-n);
   }
 
+  /** Drop all buffered events. Called when the active app is swapped. */
+  clear(): void {
+    this.events = [];
+  }
+
   onEvent(callback: (events: ActivityEvent[]) => void): () => void {
     this.listeners.push(callback);
     return () => {

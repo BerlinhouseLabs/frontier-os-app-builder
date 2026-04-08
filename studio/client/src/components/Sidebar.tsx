@@ -17,16 +17,29 @@ interface SidebarProps {
   activities: ActivityEvent[];
   onRestartVite: () => void;
   onShowLogs?: () => void;
+  onBackToApps?: () => void;
 }
 
-export function Sidebar({ state, viteStatus, viteError, errors, activities, onRestartVite, onShowLogs }: SidebarProps) {
+export function Sidebar({ state, viteStatus, viteError, errors, activities, onRestartVite, onShowLogs, onBackToApps }: SidebarProps) {
   const [showActivityFilters, setShowActivityFilters] = useState(false);
 
   return (
     <aside className="w-80 h-full bg-gray-900 border-r border-gray-800 flex flex-col">
-      {/* Logo */}
-      <div className="px-4 py-3 border-b border-gray-800 shrink-0">
+      {/* Logo + back to apps */}
+      <div className="px-4 py-3 border-b border-gray-800 shrink-0 flex items-center justify-between gap-2">
         <h1 className="text-xs font-bold uppercase tracking-widest text-gray-500">Frontier Studio</h1>
+        {onBackToApps && (
+          <button
+            onClick={onBackToApps}
+            className="group flex items-center gap-1 text-xs text-gray-500 hover:text-gray-200 transition-colors"
+            title="Back to all apps"
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>Apps</span>
+          </button>
+        )}
       </div>
 
       {/* Errors (only renders when present) */}

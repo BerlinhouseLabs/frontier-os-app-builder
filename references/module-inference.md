@@ -307,6 +307,31 @@ Given a natural-language business description of an app:
 
 ---
 
+### Navigation
+
+**Trigger keywords:** navigate, deep link, deeplink, open app, launch app, redirect, cross-app, inter-app, link to, switch app, app-to-app, close app
+
+**Most commonly used methods:**
+- `openApp(appId, options)` -- navigate to another Frontier OS app with optional path and params
+- `close()` -- close the current app and return to the previous screen
+- `onDeepLink(callback)` -- register a listener for incoming deep link data from another app
+
+**Permissions:**
+
+| Permission              | Description                                  |
+| ----------------------- | -------------------------------------------- |
+| `navigation:openApp`    | Navigate to another app in Frontier OS       |
+| `navigation:close`      | Close the current app                        |
+
+Note: `onDeepLink` does not require a permission — it is a passive listener that receives data when the app was opened via another app's `openApp()` call.
+
+**Example business descriptions:**
+- "A restaurant app that links to the POS payment app for checkout"
+- "A dashboard that deep links into specific views of other apps"
+- "An app launcher that opens other Frontier OS apps"
+
+---
+
 ## Inference Examples
 
 ### Example 1: "A hotel booking app where users can browse rooms and pay with FND"

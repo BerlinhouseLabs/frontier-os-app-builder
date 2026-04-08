@@ -71,7 +71,7 @@ Plans:
   1. sdk-context.tsx exists and exports useSdk + SdkProvider
   2. sdk-services.tsx maps all service methods to real SDK calls
   3. Layout.tsx has isInFrontierApp() detection and SdkProvider wrapping
-  4. vercel.json has all 3 CORS origin blocks
+  4. vercel.json has all 5 CORS origin blocks
   5. App works both standalone (mocks) and in iframe (real SDK)
   6. npm run build succeeds
 **Plans**: 1 plan (mechanical)

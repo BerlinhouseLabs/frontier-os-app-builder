@@ -13,7 +13,7 @@ Reference for the standard structure, conventions, and tech stack used by all Fr
 | Language     | TypeScript                      | 5.9       |
 | CSS          | Tailwind CSS (via PostCSS)      | 4         |
 | Testing      | Vitest + jsdom + Testing Library| 4 / 27    |
-| SDK          | @frontiertower/frontier-sdk     | 0.21.0    |
+| SDK          | @frontiertower/frontier-sdk     | 0.20.0    |
 | Routing      | react-router-dom                | 7         |
 
 ---
@@ -152,7 +152,7 @@ export default {
 
 ### `vercel.json`
 
-See [deployment.md](deployment.md) for the full file. All apps share the same CORS configuration with 3 origin blocks.
+See [deployment.md](deployment.md) for the full file. All apps share the same CORS configuration with 5 origin blocks.
 
 ---
 
@@ -583,7 +583,7 @@ The final phase of every app wires the real Frontier SDK in. This is a mechanica
 3. **Create `src/lib/sdk-services.tsx`**: Adapter mapping FrontierServices interface to real SDK calls
 4. **Upgrade `src/lib/frontier-services.tsx`**: Add environment detection — iframe uses SDK adapter, standalone uses mocks
 5. **Upgrade `src/views/Layout.tsx`**: Add `isInFrontierApp()` detection, standalone fallback, `SdkProvider` wrapping
-6. **Add CORS origins to `vercel.json`**: All 3 Frontier OS origins
+6. **Add CORS origins to `vercel.json`**: All 5 Frontier OS origins
 
 After SDK Integration, the app works in both modes:
 - **Standalone** (browser): Uses mock services, shows development data

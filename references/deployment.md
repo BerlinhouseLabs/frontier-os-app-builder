@@ -70,6 +70,54 @@ All Frontier OS apps deploy to Vercel. The `vercel.json` file is identical acros
         {
           "type": "header",
           "key": "Origin",
+          "value": "https://alpha.os.frontiertower.io"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://alpha.os.frontiertower.io"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "Origin",
+          "value": "https://beta.os.frontiertower.io"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://beta.os.frontiertower.io"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "Origin",
           "value": "http://localhost:5173"
         }
       ],
@@ -92,7 +140,7 @@ All Frontier OS apps deploy to Vercel. The `vercel.json` file is identical acros
 }
 ```
 
-### Why 3 Separate Blocks
+### Why 5 Separate Blocks
 
 Vercel does not support multiple values in a single `Access-Control-Allow-Origin` header. Each allowed origin requires its own conditional header block using the `has` matcher. The `has` condition checks the incoming `Origin` request header and only attaches the CORS response headers when the origin matches.
 
@@ -100,12 +148,14 @@ Vercel does not support multiple values in a single `Access-Control-Allow-Origin
 
 ## Allowed Origins
 
-The Frontier Wallet PWA runs at these 3 origins. Apps must allow CORS from all of them:
+The Frontier Wallet PWA runs at these 5 origins. Apps must allow CORS from all of them:
 
 | Origin                                    | Environment  | Description                                                    |
 | ----------------------------------------- | ------------ | -------------------------------------------------------------- |
 | `http://localhost:5173`                   | Development  | Local Vite dev server for the PWA                              |
 | `https://sandbox.os.frontiertower.io`     | Sandbox      | Sandbox environment                                            |
+| `https://alpha.os.frontiertower.io`       | Alpha        | Early access / design preview                                  |
+| `https://beta.os.frontiertower.io`        | Beta         | QA'd, pre-production                                           |
 | `https://os.frontiertower.io`             | Production   | Production ready                                               |
 
 These origins are also hardcoded in the SDK at `@frontiertower/frontier-sdk/ui-utils/detection.ts` as `ALLOWED_ORIGINS`.
@@ -122,7 +172,7 @@ In addition to CORS, all deployment targets should include:
 
 | Header                       | Recommended Value                                  | Purpose                                     |
 | ---------------------------- | -------------------------------------------------- | ------------------------------------------- |
-| `Content-Security-Policy`    | Include `frame-ancestors` for all 3 Frontier origins | Prevents embedding by unauthorized sites   |
+| `Content-Security-Policy`    | Include `frame-ancestors` for all 5 Frontier origins | Prevents embedding by unauthorized sites   |
 | `X-Content-Type-Options`     | `nosniff`                                          | Prevents MIME-type sniffing                 |
 | `Referrer-Policy`            | `strict-origin-when-cross-origin`                  | Controls referrer information leakage       |
 | `Permissions-Policy`         | Disable unnecessary browser APIs                   | Reduces attack surface                      |

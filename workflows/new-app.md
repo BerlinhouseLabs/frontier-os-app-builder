@@ -38,6 +38,9 @@ If you want to start fresh: delete .frontier-app/ and run /fos:new-app again
 Exit workflow.
 
 **If `has_git` is false:** Will initialize git after scaffolding (step 9).
+
+**Check for Studio context file:**
+Read `.frontier-studio-context.md` if it exists in the current directory or `../.frontier-studio-context.md` in the parent. This file contains Frontier Tower domain knowledge (floors, membership, events, governance, existing apps) selected by the developer in Frontier Studio. It complements the SDK technical references you already have — use it to inform module inference, domain questions, and requirements throughout the workflow. Skip if the file doesn't exist.
 </step>
 
 <step name="gather_description">
@@ -169,7 +172,23 @@ Use AskUserQuestion:
 </step>
 
 <step name="create_app_directory">
-**Create the app directory structure.**
+**Create the app directory and project state structure.**
+
+Generate the app directory name from the confirmed app name:
+- Kebab-case the name: "Tip Jar" → "tip-jar"
+- Prefix with `frontier-os-app-`: "tip-jar" → "frontier-os-app-tip-jar"
+
+If the current directory already IS the app directory (user pre-created it and cd'd in), skip directory creation — just create `.frontier-app/` in place.
+
+Otherwise, create the directory and move into it:
+
+```bash
+APP_SLUG="frontier-os-app-[kebab-name]"
+mkdir -p "$APP_SLUG"
+cd "$APP_SLUG"
+```
+
+Then create the project state directory:
 
 ```bash
 APP_DIR=$(pwd)
@@ -177,8 +196,12 @@ mkdir -p .frontier-app/phases/01-scaffold
 ```
 
 This creates:
+- `frontier-os-app-[name]/` — The app project directory (auto-created)
 - `.frontier-app/` — Project state directory
 - `.frontier-app/phases/01-scaffold/` — Phase 1 directory (always created)
+
+**How to detect if already in an app directory:**
+If the user already created and cd'd into a directory named `frontier-os-app-*` that is empty (no files except maybe `.git`), treat it as the app directory and skip creation. Otherwise, create the subdirectory.
 </step>
 
 <step name="create_roadmap">

@@ -10,7 +10,11 @@ interface TerminalPaneProps {
 /**
  * Embedded terminal that opens its own WebSocket and pipes a server-side PTY.
  * Server spawns `claude` (or $SHELL fallback) on first 'pty-start' message.
+ *
+ * The pane is presented as "Frontier Builder" — a Frontier-branded surface
+ * with the underlying CLI as an implementation detail.
  */
+
 export function TerminalPane({ visible }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -91,10 +95,10 @@ export function TerminalPane({ visible }: TerminalPaneProps) {
           term.write(msg.data);
         } else if (msg.type === 'pty-exit') {
           setStatus('exited');
-          term.write(`\r\n\x1b[33m[process exited code=${msg.code}]\x1b[0m\r\n`);
+          term.write(`\r\n\x1b[33m[builder session ended — code ${msg.code}]\x1b[0m\r\n`);
         } else if (msg.type === 'pty-error') {
           setStatus('error');
-          setErrorMsg(msg.message || 'PTY failed to start');
+          setErrorMsg(msg.message || 'Builder failed to start');
         }
       } catch {
         // ignore non-JSON / unrelated messages on this ws
@@ -166,21 +170,35 @@ export function TerminalPane({ visible }: TerminalPaneProps) {
     }
   }, [visible]);
 
+  const statusDot =
+    status === 'ready' ? 'bg-emerald-400' :
+    status === 'connecting' ? 'bg-amber-400 animate-pulse' :
+    status === 'exited' ? 'bg-gray-500' :
+    'bg-red-500';
+
+  const statusLabel =
+    status === 'ready' ? 'Online' :
+    status === 'connecting' ? 'Waking the Builder…' :
+    status === 'exited' ? 'Offline' :
+    errorMsg || 'Error';
+
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a] border-t border-gray-800">
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-800 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="text-gray-400 font-medium">Terminal</span>
-          {status === 'connecting' && <span className="text-gray-600">• connecting…</span>}
-          {status === 'ready' && <span className="text-green-500">• live</span>}
-          {status === 'exited' && <span className="text-amber-500">• exited</span>}
-          {status === 'error' && (
-            <span className="text-red-500" title={errorMsg || ''}>
-              • {errorMsg || 'error'}
-            </span>
-          )}
+    <div className="h-full flex flex-col bg-[#0a0a0a]">
+      {/* Header — claimed as Frontier Builder, not "Terminal" */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800 text-xs">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+            F
+          </div>
+          <span className="text-gray-200 font-medium">Frontier Builder</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
+          <span className="text-gray-400 text-[11px]" title={errorMsg || ''}>{statusLabel}</span>
         </div>
       </div>
+
+      {/* Body: xterm */}
       <div ref={containerRef} className="flex-1 min-h-0 px-1 pt-1" />
     </div>
   );

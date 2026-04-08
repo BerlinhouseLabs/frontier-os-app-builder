@@ -52,3 +52,18 @@ export interface ActivityEvent {
 }
 
 export type ViteStatus = 'running' | 'starting' | 'stopped' | 'error';
+
+/** Lightweight summary used by the workspace app picker. */
+export interface AppSummary {
+  path: string;
+  name: string;
+  description: string;
+  milestone: string;
+  sdkPhase: number | null | string;
+  status: string;
+  phaseCount: number;
+  completedPhases: number;
+  progressPercent: number;
+  modules: string[];
+  modifiedAt: number;
+}

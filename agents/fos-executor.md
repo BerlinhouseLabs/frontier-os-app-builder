@@ -295,7 +295,7 @@ When accessing modules via `useServices()`, use these property names:
 8. **Iframe detection:** `isInFrontierApp()` check in Layout.tsx. Standalone mode shows fallback banner.
 9. **SdkProvider wrapping:** App wrapped in SdkProvider when inside iframe. SDK initialized once via useRef, destroyed on unmount.
 10. **Permissions:** Every SDK method used must have permission declared in manifest.json.
-11. **CORS:** vercel.json must include all 3 Frontier OS origins (os.frontiertower.io, sandbox.os.frontiertower.io, localhost:5173).
+11. **CORS:** vercel.json must include all 5 Frontier OS origins (os.frontiertower.io, sandbox.os.frontiertower.io, alpha.os.frontiertower.io, beta.os.frontiertower.io, localhost:5173).
 12. **SDK imports:** Use `@frontiertower/frontier-sdk` for SDK classes. Exact import paths, not barrel imports.
 </frontier_os_rules>
 
@@ -331,7 +331,7 @@ Follow standard Layout pattern from `templates/app/layout.tsx`:
 - Wrap children in `SdkProvider` when in iframe
 
 **Step 6: Add CORS origins to vercel.json**
-Replace vercel.json with full version from `templates/app/vercel.json` (has all 3 CORS origin blocks plus SPA rewrite).
+Replace vercel.json with full version from `templates/app/vercel.json` (has all 5 CORS origin blocks plus SPA rewrite).
 
 </sdk_integration_execution>
 
