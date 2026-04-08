@@ -58,9 +58,14 @@ Check if `$ARGUMENTS` contains a description (any text that isn't just flags).
 Building: "[description from arguments]"
 ```
 
-**If no description:** Use AskUserQuestion:
+**If no description:** Use AskUserQuestion (if available):
 - header: "App Idea"
 - question: "What Frontier OS app do you want to build? Describe it in plain language — what it does, who uses it, and what Frontier features it needs."
+
+If AskUserQuestion is denied (autonomous/don't-ask mode), output an error and exit — a description is required:
+```
+Error: No app description provided. Usage: /fos:new-app "describe your app"
+```
 
 **Store the description** for use in subsequent steps.
 </step>
@@ -133,6 +138,8 @@ Generate 2-5 questions based on WHICH modules were inferred. These are DOMAIN qu
 
 **Ask questions one batch at a time** using AskUserQuestion with appropriate options for each. Keep it to ONE round of questions — do not over-interrogate.
 
+**If AskUserQuestion is denied (autonomous/don't-ask mode):** Skip this step entirely. Use reasonable defaults based on the description and any Studio context file. Briefly state the defaults you're choosing and why, then proceed to confirmation.
+
 **For modules with no specific questions** (Storage, Chain): skip — these are utility modules with standard patterns.
 </step>
 
@@ -164,7 +171,7 @@ N. **Phase N: SDK Integration** — Wire SDK, create adapter, upgrade Layout for
 Total permissions: [N]
 ```
 
-Use AskUserQuestion:
+Use AskUserQuestion (if available):
 - header: "Confirm"
 - question: "Does this look right?"
 - options:
@@ -174,6 +181,8 @@ Use AskUserQuestion:
 
 **If "Change something":** Ask what to change, adjust, and re-confirm.
 **If "Start over":** Return to step 2.
+
+**If AskUserQuestion is denied (autonomous/don't-ask mode):** Display the summary and proceed directly to scaffolding. The user can adjust later via `/fos:add-feature` or by editing manifest.json.
 </step>
 
 <step name="create_app_directory">
