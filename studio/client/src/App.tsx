@@ -32,6 +32,7 @@ export function App() {
   const [creatingApp, setCreatingApp] = useState(false);
   const [createCommand, setCreateCommand] = useState<string | null>(null);
   const [pendingDescription, setPendingDescription] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [phoneId, setPhoneId] = useState<string>(() => {
     try {
       return localStorage.getItem('studio-phone') || DEFAULT_PHONE_ID;
@@ -191,7 +192,6 @@ export function App() {
   if (!appDir) {
     // Step 2: Terminal with the command ready to run
     if (creatingApp && createCommand) {
-      const [copied, setCopied] = useState(false);
       const copyCmd = () => {
         navigator.clipboard.writeText(createCommand);
         setCopied(true);
