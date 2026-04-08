@@ -19,7 +19,7 @@ export function App() {
     state, viteStatus, viteError, errors, activities, connected, waiting,
     reconnectAttempt, reconnectDelay, restartVite, viteLogs, requestViteLogs,
     appDir, apps, workspaceRoot, appsLoading, selectApp, backToApps, refreshApps,
-    appChangeKey, writeContext,
+    appChangeKey, writeContext, contextWritePending,
   } = useStudio();
   const { toasts, addToast, dismissToast } = useToasts();
   const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -31,6 +31,7 @@ export function App() {
   const [showTerminal, setShowTerminal] = useState(true);
   const [creatingApp, setCreatingApp] = useState(false);
   const [createCommand, setCreateCommand] = useState<string | null>(null);
+  const [pendingDescription, setPendingDescription] = useState<string | null>(null);
   const [phoneId, setPhoneId] = useState<string>(() => {
     try {
       return localStorage.getItem('studio-phone') || DEFAULT_PHONE_ID;
@@ -44,6 +45,15 @@ export function App() {
     setPhoneId(id);
     try { localStorage.setItem('studio-phone', id); } catch { /* ignore */ }
   }, []);
+
+  // Set the create command once context write completes
+  useEffect(() => {
+    if (pendingDescription && !contextWritePending) {
+      const escaped = pendingDescription.replace(/"/g, '\\"');
+      setCreateCommand(`/fos:new-app "${escaped}"`);
+      setPendingDescription(null);
+    }
+  }, [pendingDescription, contextWritePending]);
 
   // Track previous values for toast triggers
   const prevStatusRef = useRef<string | null>(null);
@@ -181,39 +191,35 @@ export function App() {
   if (!appDir) {
     // Step 2: Terminal with the command ready to run
     if (creatingApp && createCommand) {
+      const [copied, setCopied] = useState(false);
+      const copyCmd = () => {
+        navigator.clipboard.writeText(createCommand);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      };
+
       return (
         <div className="h-screen flex flex-col bg-gray-950">
-          <header className="border-b border-gray-800 px-6 py-3 shrink-0 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => { setCreatingApp(false); setCreateCommand(null); }}
-                className="text-gray-400 hover:text-gray-200 transition-colors"
-                title="Back to apps"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-              </button>
-              <div>
-                <h1 className="text-sm font-semibold text-white">Building Your App</h1>
-                <p className="text-xs text-gray-500">
-                  Paste the command below into the terminal, or type your own
-                </p>
-              </div>
-            </div>
+          {/* Compact top bar with command pill */}
+          <div className="border-b border-gray-800 px-4 py-2 shrink-0 flex items-center gap-3">
             <button
-              onClick={() => navigator.clipboard.writeText(createCommand)}
-              className="text-xs text-gray-400 hover:text-gray-200 px-2 py-1 rounded border border-gray-800 hover:border-gray-700 transition-colors"
-              title="Copy command"
+              onClick={() => { setCreatingApp(false); setCreateCommand(null); }}
+              className="text-gray-500 hover:text-gray-200 transition-colors shrink-0"
             >
-              Copy Command
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
             </button>
-          </header>
-          {/* Command preview */}
-          <div className="border-b border-gray-800 px-6 py-2 bg-gray-900/50">
-            <pre className="text-xs text-blue-400 font-mono whitespace-pre-wrap break-all max-h-20 overflow-y-auto">
-              {createCommand}
-            </pre>
+            <button
+              onClick={copyCmd}
+              className="flex-1 min-w-0 flex items-center gap-2 bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-lg px-3 py-1.5 transition-colors group text-left"
+              title="Click to copy"
+            >
+              <code className="text-xs text-blue-400 font-mono truncate flex-1">{createCommand}</code>
+              <span className={`text-[10px] shrink-0 transition-colors ${copied ? 'text-green-400' : 'text-gray-600 group-hover:text-gray-400'}`}>
+                {copied ? 'Copied!' : 'Click to copy'}
+              </span>
+            </button>
           </div>
           <div className="flex-1 min-h-0">
             <TerminalPane key="create" visible={true} />
@@ -229,12 +235,15 @@ export function App() {
         <>
           <ContextPicker
             onStart={(description, contextPrompt) => {
-              // Write context file to workspace so /fos:new-app can read it
               if (contextPrompt) {
+                // Write context file first, then set command after write ack
                 writeContext(`# Frontier Tower Context\n\nSelected by the developer in Frontier Studio for this app.\n\n${contextPrompt}`);
+                setPendingDescription(description);
+              } else {
+                // No context to write — set command immediately
+                const escaped = description.replace(/"/g, '\\"');
+                setCreateCommand(`/fos:new-app "${escaped}"`);
               }
-              const escaped = description.replace(/"/g, '\\"');
-              setCreateCommand(`/fos:new-app "${escaped}"`);
             }}
             onBack={() => setCreatingApp(false)}
           />

@@ -28,6 +28,10 @@ export interface StudioState {
   appChangeKey: number;
   /** Write a context file to the workspace root for /fos:new-app to read. */
   writeContext: (content: string) => void;
+  /** True while a context-write is in-flight, false after ack/error. */
+  contextWritePending: boolean;
+  /** Non-null if the last context-write failed. */
+  contextWriteError: string | null;
 }
 
 export function useStudio(): StudioState {
@@ -46,6 +50,8 @@ export function useStudio(): StudioState {
   const [workspaceRoot, setWorkspaceRoot] = useState<string | null>(null);
   const [appsLoading, setAppsLoading] = useState(true);
   const [appChangeKey, setAppChangeKey] = useState(0);
+  const [contextWritePending, setContextWritePending] = useState(false);
+  const [contextWriteError, setContextWriteError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const attemptRef = useRef(0);
@@ -115,6 +121,14 @@ export function useStudio(): StudioState {
           case 'vite-logs':
             setViteLogs(msg.lines || []);
             break;
+          case 'context-written':
+            setContextWritePending(false);
+            setContextWriteError(null);
+            break;
+          case 'context-error':
+            setContextWritePending(false);
+            setContextWriteError(msg.message || 'Failed to write context');
+            break;
         }
       } catch {
         // ignore malformed messages
@@ -171,6 +185,8 @@ export function useStudio(): StudioState {
 
   const writeContext = useCallback((content: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      setContextWritePending(true);
+      setContextWriteError(null);
       wsRef.current.send(JSON.stringify({ type: 'write-context', content }));
     }
   }, []);
@@ -204,5 +220,7 @@ export function useStudio(): StudioState {
     refreshApps,
     appChangeKey,
     writeContext,
+    contextWritePending,
+    contextWriteError,
   };
 }

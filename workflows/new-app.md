@@ -41,6 +41,11 @@ Exit workflow.
 
 **Check for Studio context file:**
 Read `.frontier-studio-context.md` if it exists in the current directory or `../.frontier-studio-context.md` in the parent. This file contains Frontier Tower domain knowledge (floors, membership, events, governance, existing apps) selected by the developer in Frontier Studio. It complements the SDK technical references you already have — use it to inform module inference, domain questions, and requirements throughout the workflow. Skip if the file doesn't exist.
+
+**After reading (if it existed):** Delete the file to prevent stale context from leaking into future app creations:
+```bash
+rm -f .frontier-studio-context.md ../.frontier-studio-context.md
+```
 </step>
 
 <step name="gather_description">
