@@ -1,6 +1,26 @@
 import { useState } from 'react';
 import type { ProjectState, PhaseInfo, PhaseDetail } from '../hooks/useStudio';
 
+function phaseStatusLabel(phase: PhaseInfo, isCurrent: boolean, detail?: PhaseDetail | null): { text: string; className: string } {
+  if (phase.status === 'complete') {
+    return { text: 'Done', className: 'text-green-400' };
+  }
+  if (!isCurrent) {
+    return { text: '', className: 'text-gray-600' };
+  }
+  // Current phase — describe where we are in the workflow
+  if (!detail || detail.decisions.length === 0) {
+    return { text: 'Ready to discuss', className: 'text-amber-400' };
+  }
+  if (detail.plans.length === 0) {
+    return { text: 'Ready to plan', className: 'text-amber-400' };
+  }
+  if (detail.plans.some(p => p.status === 'pending')) {
+    return { text: 'Ready to build', className: 'text-amber-400' };
+  }
+  return { text: 'Verifying', className: 'text-amber-400' };
+}
+
 function PhaseIcon({ phase, isCurrent }: { phase: PhaseInfo; isCurrent: boolean }) {
   if (phase.status === 'complete') {
     return (
@@ -44,10 +64,9 @@ function PhaseDetailPanel({ detail }: { detail: PhaseDetail }) {
           {detail.plans.map((p) => (
             <div key={p.id} className="flex items-center gap-1.5 text-gray-400">
               <span className={p.status === 'complete' ? 'text-green-400' : 'text-gray-600'}>
-                {p.status === 'complete' ? '✓' : '○'}
+                {p.status === 'complete' ? '\u2713' : '\u25CB'}
               </span>
               <span className="truncate">{p.objective}</span>
-              <span className="text-gray-600 shrink-0">({p.taskCount} tasks)</span>
             </div>
           ))}
         </div>
@@ -69,43 +88,40 @@ export function PhaseProgress({ state }: { state: ProjectState }) {
     <div className="space-y-1">
       <div className="space-y-0.5">
         {state.phases.map((phase) => {
-          const isCurrent = phase.number === state.currentPhase;
-          const isComplete = phase.status === 'complete';
-          const planCount = state.planCounts[phase.number];
+          const isCurrent = phase.status === 'in-progress' || phase.number === state.currentPhase;
           const detail = state.phaseDetails?.[phase.number];
           const isExpanded = expanded === phase.number;
           const hasDetail = detail && (detail.decisions.length > 0 || detail.plans.length > 0 || detail.verification);
+          const status = phaseStatusLabel(phase, isCurrent, detail);
 
           return (
             <div key={phase.number}>
               <div
-                className={`flex items-center gap-2.5 px-2 py-1 rounded-lg transition-colors ${
+                className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors ${
                   isCurrent ? 'bg-gray-800/80' : 'hover:bg-gray-800/40'
                 } ${hasDetail ? 'cursor-pointer' : ''}`}
                 onClick={() => hasDetail && setExpanded(isExpanded ? null : phase.number)}
               >
                 <PhaseIcon phase={phase} isCurrent={isCurrent} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    {hasDetail && (
-                      <svg
-                        className={`w-3 h-3 text-gray-500 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    )}
-                    <p className={`text-sm truncate ${isCurrent ? 'text-white font-medium' : 'text-gray-300'}`} title={phase.name}>
-                      {phase.name}
-                    </p>
-                  </div>
-                  {planCount && !isComplete && (
-                    <p className="text-xs text-gray-500">
-                      {planCount.complete}/{planCount.total} plans
-                    </p>
+                  <p className={`text-sm truncate ${isCurrent ? 'text-white font-medium' : 'text-gray-300'}`} title={phase.name}>
+                    {phase.name}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {status.text && (
+                    <span className={`text-[11px] ${status.className}`}>{status.text}</span>
+                  )}
+                  {hasDetail && (
+                    <svg
+                      className={`w-3 h-3 text-gray-600 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
                   )}
                 </div>
               </div>
@@ -126,7 +142,7 @@ export function PhaseProgress({ state }: { state: ProjectState }) {
       {/* Overall progress bar */}
       <div className="mt-2 px-2">
         <div className="flex justify-between text-xs text-gray-500 mb-1">
-          <span>{state.completedPhases}/{state.phaseCount} phases</span>
+          <span>{state.completedPhases} of {state.phaseCount} phases</span>
           <span>{state.progressPercent}%</span>
         </div>
         <div className="h-1 bg-gray-800 rounded-full overflow-hidden">

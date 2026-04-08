@@ -10,7 +10,8 @@ import { WaitingScreen } from './components/WaitingScreen';
 import { ShortcutsOverlay } from './components/ShortcutsOverlay';
 import { CommandPalette, type PaletteAction } from './components/CommandPalette';
 import { ViteLogViewer } from './components/ViteLogViewer';
-import { TerminalPane } from './components/TerminalPane';
+import { TerminalPane, type TerminalPaneHandle } from './components/TerminalPane';
+import { NextAction } from './components/NextAction';
 import { AppPicker } from './components/AppPicker';
 import { ContextPicker } from './components/ContextPicker';
 
@@ -33,6 +34,7 @@ export function App() {
   const [createCommand, setCreateCommand] = useState<string | null>(null);
   const [pendingDescription, setPendingDescription] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const terminalRef = useRef<TerminalPaneHandle>(null);
   const [phoneId, setPhoneId] = useState<string>(() => {
     try {
       return localStorage.getItem('studio-phone') || DEFAULT_PHONE_ID;
@@ -84,6 +86,12 @@ export function App() {
   const handleRefresh = useCallback(() => {
     setRefreshKey(k => k + 1);
   }, []);
+
+  const handleRunCommand = useCallback((cmd: string) => {
+    terminalRef.current?.sendCommand(cmd);
+    // If terminal is hidden, show it so the user sees what's happening
+    if (!showTerminal) setShowTerminal(true);
+  }, [showTerminal]);
 
   // Keyboard shortcuts
   const shortcuts = useMemo(() => ({
@@ -413,10 +421,17 @@ export function App() {
           </div>
         </main>
 
-        {/* RIGHT: Claude Code terminal — keyed on appChangeKey so it remounts on app swap */}
+        {/* RIGHT: Claude Code terminal + workflow buttons — keyed on appChangeKey so it remounts on app swap */}
         {showTerminal && isDesktop && (
-          <aside className="w-[480px] shrink-0 h-full border-l border-gray-800">
-            <TerminalPane key={appChangeKey} visible={showTerminal} />
+          <aside className="w-[480px] shrink-0 h-full border-l border-gray-800 flex flex-col">
+            <div className="flex-1 min-h-0">
+              <TerminalPane ref={terminalRef} key={appChangeKey} visible={showTerminal} />
+            </div>
+            {state.nextAction && (
+              <div className="border-t border-gray-800 px-3 py-3 bg-gray-900/50 shrink-0">
+                <NextAction state={state} onRunCommand={handleRunCommand} />
+              </div>
+            )}
           </aside>
         )}
       </div>

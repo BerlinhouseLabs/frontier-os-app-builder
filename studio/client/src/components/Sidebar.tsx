@@ -3,7 +3,7 @@ import type { ProjectState, ViteStatus, ParseError, ActivityEvent } from '../hoo
 import { AppHeader } from './AppHeader';
 import { PhaseProgress } from './PhaseProgress';
 import { ModuleChips } from './ModuleChips';
-import { NextAction } from './NextAction';
+
 import { Section } from './Section';
 import { ViteStatus as ViteStatusIndicator } from './ViteStatus';
 import { ErrorPanel } from './ErrorPanel';
@@ -48,8 +48,6 @@ export function Sidebar({ state, viteStatus, viteError, errors, activities, onRe
       {/* Scrollable content */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
         <AppHeader state={state} />
-
-        <NextAction state={state} />
 
         <Section title="Phases" storageKey="phases" defaultOpen>
           <PhaseProgress state={state} />

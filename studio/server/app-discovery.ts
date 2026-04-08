@@ -47,17 +47,23 @@ async function loadAppSummary(appDir: string): Promise<AppSummary | null> {
 
     // State is optional — apps without STATE.md still show up as 'unknown'
     let status = 'unknown';
+    let currentPhase = 1;
     try {
       const stateRaw = await readFile(join(stateDir, 'STATE.md'), 'utf-8');
       const parsed = parseState(stateRaw);
       status = parsed.status || 'unknown';
+      currentPhase = (parsed.currentPhase as number) || 1;
     } catch {
       /* no state file — fine */
     }
 
     const phases = manifest.phases || [];
-    const completedPhases = phases.filter(p => p.status === 'complete').length;
     const phaseCount = phases.length;
+    // manifest.json phase statuses are unreliable — infer from currentPhase
+    const completedPhases = Math.max(
+      phases.filter(p => p.status === 'complete').length,
+      Math.min(currentPhase - 1, phaseCount),
+    );
     const progressPercent = phaseCount > 0 ? Math.round((completedPhases / phaseCount) * 100) : 0;
 
     // Use manifest mtime as "last worked on" signal — more accurate than dir mtime,

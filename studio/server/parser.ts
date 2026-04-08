@@ -228,7 +228,6 @@ export async function parseProjectState(appDir: string): Promise<ParseResult> {
   }
 
   const phases = manifest.phases || [];
-  const completedPhases = phases.filter(p => p.status === 'complete').length;
 
   // Read phase details
   const phaseDetails: Record<number, PhaseDetail> = {};
@@ -236,6 +235,47 @@ export async function parseProjectState(appDir: string): Promise<ParseResult> {
     const detail = await readPhaseDetail(stateDir, phase);
     if (detail) {
       phaseDetails[phase.number] = detail;
+    }
+  }
+
+  // Enrich phase statuses from artifacts (manifest.json is often not updated)
+  const currentPhase = (state.currentPhase as number) || 1;
+  for (const phase of phases) {
+    if (phase.status === 'complete') continue; // trust explicit complete
+    const detail = phaseDetails[phase.number];
+    if (detail && detail.plans.length > 0 && detail.plans.every(p => p.status === 'complete')) {
+      // All plans executed — phase is complete
+      phase.status = 'complete';
+    } else if (detail && detail.summaries.length > 0) {
+      // Has some summaries — likely complete (verification may be pending)
+      phase.status = 'complete';
+    } else if (phase.number < currentPhase) {
+      // Earlier than current phase — must be done
+      phase.status = 'complete';
+    } else if (phase.number === currentPhase) {
+      phase.status = 'in-progress';
+    }
+    // else: stays not-started
+  }
+
+  const completedPhases = phases.filter(p => p.status === 'complete').length;
+
+  // Infer nextAction when STATE.md is missing or doesn't specify one
+  let nextAction = state.nextAction || '';
+  if (!nextAction && phases.length > 0) {
+    const firstIncomplete = phases.find(p => p.status !== 'complete');
+    if (firstIncomplete) {
+      const n = firstIncomplete.number;
+      const detail = phaseDetails[n];
+      if (!detail || detail.decisions.length === 0) {
+        nextAction = `/fos:discuss ${n}`;
+      } else if (!detail.plans.length) {
+        nextAction = `/fos:plan ${n}`;
+      } else if (detail.plans.some(p => p.status === 'pending')) {
+        nextAction = `/fos:execute ${n}`;
+      }
+    } else {
+      nextAction = '/fos:ship';
     }
   }
 
@@ -252,7 +292,7 @@ export async function parseProjectState(appDir: string): Promise<ParseResult> {
       currentPhase: state.currentPhase || 1,
       currentPlan: state.currentPlan || 0,
       status: state.status || 'unknown',
-      nextAction: state.nextAction || '',
+      nextAction,
       progressPercent: state.progressPercent || 0,
       coreValue: state.coreValue || '',
       planCounts: roadmap.planCounts,
