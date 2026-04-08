@@ -59,13 +59,15 @@ Continue anyway? (y/n)
 ```
 
 **If `existing_plans` is not empty:**
-Use AskUserQuestion:
+Use AskUserQuestion (if available):
 - header: "Existing Plans"
 - question: "Phase [N] already has [count] plan(s). What do you want to do?"
 - options:
   - "Replan" — Delete existing plans and create new ones
   - "View plans" — Show existing plans before deciding
   - "Keep them" — Skip planning, proceed to execution
+
+If AskUserQuestion denied: default to "Replan" — delete existing plans and create new ones.
 
 **If "Keep them":** Exit with next-up `/fos:execute N`.
 **If "Replan":** Continue (plans will be overwritten).

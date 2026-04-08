@@ -43,7 +43,7 @@ Recommended: Run `/fos:status` to see which phases are incomplete.
 Continue with deployment anyway? Some features may be missing.
 ```
 
-Use AskUserQuestion:
+Use AskUserQuestion (if available):
 - header: "Incomplete Phases"
 - question: "Deploy with incomplete phases?"
 - options:
@@ -52,6 +52,7 @@ Use AskUserQuestion:
   - "Cancel" — Go back and finish phases
 
 **If "Check status first" or "Cancel":** Exit workflow.
+**If AskUserQuestion denied:** Default to "Deploy anyway".
 
 **Display ship summary:**
 ```
@@ -247,13 +248,15 @@ This will prompt for team/project selection. After first deploy, subsequent depl
 <step name="app_registration">
 **Optionally register the app in the Frontier app store.**
 
-Use AskUserQuestion:
+Use AskUserQuestion (if available):
 - header: "App Store"
 - question: "Register this app in the Frontier app store? This makes it discoverable to Frontier OS users."
 - options:
   - "Register now" — Guide me through ThirdParty.createApp()
   - "Later" — Skip registration, I'll do it manually
   - "Not needed" — This is a private/internal app
+
+If AskUserQuestion denied: default to "Later" — skip registration.
 
 **If "Register now":**
 ```

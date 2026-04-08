@@ -91,9 +91,14 @@ Check if `$ARGUMENTS` contains feature descriptions.
 
 **If description provided in $ARGUMENTS:** Use it directly.
 
-**If no description:** Use AskUserQuestion:
+**If no description:** Use AskUserQuestion (if available):
 - header: "New Milestone"
 - question: "What features should [App Name] [next version] include? Describe the new capabilities you want to add."
+
+If AskUserQuestion denied: error and exit — a description is required:
+```
+Error: No feature descriptions provided. Usage: /fos:new-milestone "describe new features"
+```
 
 Parse the response into individual features. Each feature becomes a candidate for a phase.
 </step>
@@ -154,13 +159,15 @@ Starting from Phase [N]:
 - [ ] **Phase [N+2]: [Feature Name]** — [Description]
 ```
 
-Use AskUserQuestion:
+Use AskUserQuestion (if available):
 - header: "Confirm"
 - question: "Does this milestone plan look right?"
 - options:
   - "Looks good" — Create the phases
   - "Change something" — Adjust phases
   - "Cancel" — Don't start new milestone yet
+
+If AskUserQuestion denied: display the plan and proceed with "Looks good".
 </step>
 
 <step name="update_all_state_files">

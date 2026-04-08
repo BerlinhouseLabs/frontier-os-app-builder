@@ -108,7 +108,7 @@ Extract from ROADMAP.md for this phase:
 
 **If `has_context` is true:**
 
-Use AskUserQuestion:
+Use AskUserQuestion (if available):
 - header: "Context Exists"
 - question: "Phase [X] already has context decisions. What do you want to do?"
 - options:
@@ -119,6 +119,8 @@ Use AskUserQuestion:
 **If "Update":** Load existing CONTEXT.md, continue to analyze_phase.
 **If "View":** Display CONTEXT.md, then offer Update/Skip.
 **If "Skip":** Exit workflow with next-up pointing to `/fos:plan N`.
+
+**If AskUserQuestion denied:** Skip — use existing context as-is, proceed to planning.
 
 **If `has_context` is false:** Continue to analyze_phase.
 </step>
@@ -294,7 +296,7 @@ I've identified [count] areas where your input will shape the implementation:
 4. **[Area 4]** — [One sentence]
 ```
 
-Use AskUserQuestion:
+Use AskUserQuestion (if available):
 - header: "Topics"
 - question: "Which areas do you want to discuss? I'll handle the rest with sensible defaults."
 - multiSelect: true
@@ -302,12 +304,16 @@ Use AskUserQuestion:
 
 **If "None":** Set all areas as "Claude's Discretion" and skip to write_context.
 **If specific areas selected:** Discuss those, mark unselected as "Claude's Discretion".
+
+**If AskUserQuestion denied (autonomous/don't-ask mode):** Present the gray areas and your recommended defaults, then mark all as "Claude's Discretion" and proceed to write_context. Briefly explain each choice so the user can review in CONTEXT.md.
 </step>
 
 <step name="discuss_areas">
 **Deep-dive each selected area.**
 
-For each selected gray area, ask ONE focused question at a time. Use AskUserQuestion with concrete options — never open-ended "what do you think?"
+For each selected gray area, ask ONE focused question at a time. Use AskUserQuestion (if available) with concrete options — never open-ended "what do you think?"
+
+**If AskUserQuestion denied (autonomous/don't-ask mode):** This step is skipped — all areas were already resolved with defaults in the present_gray_areas step.
 
 **Prior decision awareness:** If `prior_decisions` contains a relevant decision for this area, present it as context: "In Phase [N], you decided [decision]. Apply the same approach here, or different?" Offer "Same as Phase [N]" as the first option, then the other alternatives.
 

@@ -35,9 +35,14 @@ Check if `$ARGUMENTS` contains a feature description.
 Adding feature: "[description]"
 ```
 
-**If no description:** Use AskUserQuestion:
+**If no description:** Use AskUserQuestion (if available):
 - header: "New Feature"
 - question: "What feature do you want to add to [App Name]? Describe what it does."
+
+If AskUserQuestion denied: error and exit — a description is required:
+```
+Error: No feature description provided. Usage: /fos:add-feature "describe the feature"
+```
 
 **Store the description** for module inference.
 </step>

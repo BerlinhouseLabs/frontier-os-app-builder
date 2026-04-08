@@ -263,11 +263,13 @@ When an executor agent returns a structured checkpoint (output contains `## CHEC
    [Awaiting section from agent return]
    ```
 
-   Use AskUserQuestion:
+   Use AskUserQuestion (if available):
    - header: "Checkpoint: [Type]"
    - question: "[Awaiting section content]"
    - If human-verify: options: ["Approved", "Issues found — describe below"]
    - If decision: options from checkpoint details
+
+   If AskUserQuestion denied: default to "Approved" for human-verify, or the first/recommended option for decisions.
 
 3. **Spawn a FRESH continuation executor:**
 
@@ -392,7 +394,7 @@ Phase [N]: [Name] — [checks_passed] checks passed, gaps remain.
 [Gap details from VERIFICATION.md Gaps section]
 ```
 
-Use AskUserQuestion:
+Use AskUserQuestion (if available):
 - header: "Verification Gaps"
 - question: "How do you want to handle these gaps?"
 - options:
@@ -409,6 +411,8 @@ Use AskUserQuestion:
 **If "Fix manually":** Exit with message: "Fix the gaps listed in `$VERIFICATION_FILE`, then run `/fos:execute [N]` to re-verify."
 
 **If "Accept with gaps":** Continue to update_state_and_roadmap. Update phase status to "partial" instead of "complete" in STATE.md. Gaps remain documented in VERIFICATION.md.
+
+**If AskUserQuestion denied:** Default to "Generate gap-closure plans and re-execute".
 </step>
 
 <step name="update_state_and_roadmap">
