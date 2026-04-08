@@ -241,15 +241,7 @@ export default function FeatureView() {
 
 ### Tailwind Dark Theme Classes
 
-Always use these semantic classes (defined in index.css @theme block):
-- **Backgrounds:** `bg-background`, `bg-card`, `bg-muted-background`
-- **Text:** `text-foreground`, `text-card-foreground`, `text-muted-foreground`
-- **Borders:** `border-border`
-- **Interactive:** `bg-primary text-primary-foreground`, `bg-accent text-accent-foreground`
-- **Status:** `text-success`, `text-danger`, `text-alert`
-- **Inputs:** `bg-input`, `ring-ring`, `outline-outline`
-
-**NEVER use hardcoded colors** (no `bg-white`, `text-black`, `bg-gray-900`). Always use the semantic CSS variable classes.
+Use semantic Tailwind classes from the app's index.css @theme block (bg-background, text-foreground, etc.). See app-patterns.md "Dark Theme CSS Variables" section for the full token list. **NEVER use hardcoded colors** (no `bg-white`, `text-black`, `bg-gray-900`).
 
 ### Type Safety
 
@@ -258,22 +250,9 @@ Always use these semantic classes (defined in index.css @theme block):
 - If a type is not exported by the SDK, define a local interface that matches the SDK's return shape
 - Always use `strict: true` TypeScript
 
-### Module Access Reference
+### Module Access
 
-When accessing modules via `useServices()`, use these property names:
-
-| Service Property | Description |
-|-----------------|-------------|
-| `services.wallet` | Wallet operations (balance, transactions, send) |
-| `services.storage` | Storage operations (get, set, delete) |
-| `services.chain` | Chain/blockchain operations |
-| `services.user` | User profile and authentication |
-| `services.partnerships` | Partnerships module |
-| `services.thirdParty` | Third-party integrations |
-| `services.communities` | Communities module |
-| `services.events` | Events module |
-| `services.offices` | Offices module |
-| `services.navigation` | Navigation module |
+Access modules via `services.<module>` from `useServices()`. Property names match SDK module names in lowercase (`services.wallet`, `services.events`, etc.).
 
 </feature_execution>
 
@@ -303,35 +282,7 @@ When accessing modules via `useServices()`, use these property names:
 
 ### SDK Integration Phase Execution
 
-For the SDK Integration phase (always the final phase), perform these mechanical operations:
-
-**Step 1: Add SDK dependency**
-```bash
-npm install @frontiertower/frontier-sdk
-```
-
-**Step 2: Create sdk-context.tsx**
-Render from `templates/app/sdk-context.tsx` to `src/lib/sdk-context.tsx`.
-This file is IDENTICAL across all apps — never customize it.
-
-**Step 3: Create sdk-services.tsx**
-Render from `templates/app/sdk-services.tsx` to `src/lib/sdk-services.tsx`.
-This adapter maps each `FrontierServices` method to the corresponding `sdk.getModule().method()` call.
-
-**Step 4: Upgrade frontier-services.tsx**
-Modify `src/lib/frontier-services.tsx` to add environment detection:
-- Import `isInFrontierApp` from `@frontiertower/frontier-sdk/ui-utils`
-- If in iframe: import and use `createSdkServices` from `./sdk-services`
-- If standalone: use existing `createMockServices()` (no change to mock code)
-
-**Step 5: Upgrade Layout.tsx**
-Follow standard Layout pattern from `templates/app/layout.tsx`:
-- Add `isInFrontierApp()` detection
-- Add `createStandaloneHTML()` fallback for standalone mode
-- Wrap children in `SdkProvider` when in iframe
-
-**Step 6: Add CORS origins to vercel.json**
-Replace vercel.json with full version from `templates/app/vercel.json` (has all 5 CORS origin blocks plus SPA rewrite).
+Follow the SDK Integration pattern from app-patterns.md "SDK Integration Pattern" section. The 6 steps are: add SDK dependency, create sdk-context.tsx, create sdk-services.tsx, upgrade frontier-services.tsx, upgrade Layout.tsx, add CORS origins. Use templates from templates/app/ for each file.
 
 </sdk_integration_execution>
 

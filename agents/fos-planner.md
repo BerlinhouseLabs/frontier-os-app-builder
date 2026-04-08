@@ -376,57 +376,9 @@ Plans should complete within ~50% context. Each plan: 2-3 tasks maximum.
 
 <frontier_os_specifics>
 
-## Service Method Reference for Plans
+## Service Method Reference
 
-When referencing service methods in task actions, use the EXACT patterns:
-
-**Initialization (always via useServices):**
-```typescript
-import { useServices } from '../lib/frontier-services';
-const services = useServices();
-```
-
-**Module access:**
-```typescript
-const wallet = services.wallet;
-const storage = services.storage;
-const chain = services.chain;
-const user = services.user;
-const partnerships = services.partnerships;
-const thirdParty = services.thirdParty;
-const communities = services.communities;
-const events = services.events;
-const offices = services.offices;
-const navigation = services.navigation;
-```
-
-**Standard hook pattern:**
-```typescript
-export function useFeature() {
-  const services = useServices();
-  const [data, setData] = useState<FeatureType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        const result = await services.module.method();
-        setData(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
-  }, [services]);
-
-  return { data, loading, error };
-}
-```
-
-**Permission mapping:** `services.module.method()` requires permission `module:method` in manifest.json.
+Access modules via `services.<module>` from `useServices()` (imported from `../lib/frontier-services`). Property names match SDK module names in lowercase. Method signatures and types are in the focused SDK reference provided via `<files_to_read>`. Permission mapping: `services.module.method()` requires permission `module:method` in manifest.json.
 
 ## Required Patterns for All Plans
 
