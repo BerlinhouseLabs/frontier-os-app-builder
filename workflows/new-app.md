@@ -194,19 +194,26 @@ Generate the app directory name from the confirmed app name:
 
 If the current directory already IS the app directory (user pre-created it and cd'd in), skip directory creation — just create `.frontier-app/` in place.
 
-Otherwise, create the directory and move into it:
+Otherwise, create the directory and **change into it immediately**:
 
 ```bash
 APP_SLUG="frontier-os-app-[kebab-name]"
-mkdir -p "$APP_SLUG"
-cd "$APP_SLUG"
+mkdir -p "$APP_SLUG" && cd "$APP_SLUG"
+```
+
+**CRITICAL:** After creating the directory, ALL subsequent commands (file writes, git, scaffold, etc.) MUST use the new app directory as the working directory. Use absolute paths or `cd` into the directory in every Bash call. The `cd` in a single Bash call does NOT persist to subsequent Bash calls — so either:
+- Prefix every Bash command with `cd "$APP_DIR" &&`, or
+- Use absolute paths (`$APP_DIR/.frontier-app/...`) for all file operations
+
+Set `APP_DIR` to the absolute path of the new app directory:
+```bash
+APP_DIR="$(pwd)/$APP_SLUG"
 ```
 
 Then create the project state directory:
 
 ```bash
-APP_DIR=$(pwd)
-mkdir -p .frontier-app/phases/01-scaffold
+mkdir -p "$APP_DIR/.frontier-app/phases/01-scaffold"
 ```
 
 This creates:
@@ -315,27 +322,19 @@ Write to `.frontier-app/manifest.json`.
 <step name="git_init_and_commit">
 **Initialize git and create initial commit.**
 
+All commands in this step MUST run inside `$APP_DIR`:
+
 **If `has_git` is false:**
 ```bash
-git init
+cd "$APP_DIR" && git init
 ```
 
 **Create .gitignore if it doesn't exist:**
-```bash
-cat > .gitignore << 'GITIGNORE'
-node_modules/
-dist/
-.env
-.env.local
-*.log
-.DS_Store
-GITIGNORE
-```
+Write `.gitignore` to `$APP_DIR/.gitignore`.
 
 **Commit all state files:**
 ```bash
-git add .frontier-app/ .gitignore
-git commit -m "feat: initialize [App Name] — Frontier OS app
+cd "$APP_DIR" && git add .frontier-app/ .gitignore && git commit -m "feat: initialize [App Name] — Frontier OS app
 
 SDK Modules: [comma-separated modules]
 Phases: [count] phases planned for v1
