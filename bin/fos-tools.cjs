@@ -853,6 +853,31 @@ Commands:
       break;
     }
 
+    case 'sdk-ref': {
+      const modulesIdx = rest.indexOf('--modules');
+      if (modulesIdx < 0 || !rest[modulesIdx + 1]) {
+        error('sdk-ref requires --modules <Module1,Module2,...>');
+      }
+      const modules = rest[modulesIdx + 1].split(',').map(m => m.trim().toLowerCase());
+      const fosHome = process.env.FOS_HOME || path.join(require('os').homedir(), '.claude', 'frontier-os-app-builder');
+      const sdkDir = path.join(fosHome, 'references', 'sdk');
+      const always = ['init', 'types'];
+      const allFiles = [...always, ...modules];
+      const parts = [];
+      for (const f of allFiles) {
+        const fp = path.join(sdkDir, `${f}.md`);
+        if (!fs.existsSync(fp)) {
+          error(`SDK reference file not found: ${fp}`);
+        }
+        parts.push(fs.readFileSync(fp, 'utf-8'));
+      }
+      const content = parts.join('\n\n---\n\n');
+      const tmpPath = path.join(require('os').tmpdir(), `fos-sdk-ref-${Date.now()}.md`);
+      fs.writeFileSync(tmpPath, content);
+      console.log(`@file:${tmpPath}`);
+      break;
+    }
+
     default:
       error(`Unknown command: ${command}. Run 'node fos-tools.cjs help' for usage.`);
   }
