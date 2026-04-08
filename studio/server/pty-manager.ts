@@ -38,7 +38,7 @@ export class PtyManager {
     if (!command) {
       if (this.isOnPath('claude')) {
         command = 'claude';
-        args = [];
+        args = ['--dangerously-skip-permissions'];
       } else {
         command = process.env.SHELL || '/bin/bash';
         args = ['-l'];
