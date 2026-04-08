@@ -194,24 +194,21 @@ function AppCard({ app, onSelect }: { app: AppSummary; onSelect: () => void }) {
 
 function EmptyState({ workspaceRoot, onCreateApp }: { workspaceRoot: string | null; onCreateApp: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20 flex items-center justify-center mb-5">
-        <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    <div className="flex flex-col items-center justify-center h-64 text-center">
+      <div className="w-12 h-12 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center mb-3">
+        <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
       </div>
-      <h2 className="text-xl font-semibold text-white mb-1">No apps yet</h2>
-      <p className="text-sm text-gray-500 max-w-xs mb-6">
-        Build your first Frontier OS app — describe what you want and we'll handle the rest.
-      </p>
+      <p className="text-sm text-gray-400">No Frontier OS apps found</p>
       {workspaceRoot && (
-        <p className="text-[11px] text-gray-700 font-mono mb-4">{workspaceRoot}</p>
+        <p className="text-xs text-gray-600 font-mono mt-1">in {workspaceRoot}</p>
       )}
       <button
         onClick={onCreateApp}
-        className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 px-6 py-2.5 rounded-lg transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
+        className="mt-4 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg transition-colors"
       >
-        Create Your First App
+        + Create Your First App
       </button>
     </div>
   );
