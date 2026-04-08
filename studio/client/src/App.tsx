@@ -56,6 +56,26 @@ export function App() {
     }
   }, [pendingDescription, contextWritePending]);
 
+  // Snapshot apps count when entering creation terminal, poll for new apps, auto-select
+  const appsAtCreationRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!(creatingApp && createCommand)) return;
+    // Record which apps existed when creation started
+    appsAtCreationRef.current = new Set(apps.map(a => a.path));
+    const interval = setInterval(() => refreshApps(), 3000);
+    return () => clearInterval(interval);
+  }, [creatingApp, createCommand, refreshApps]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!(creatingApp && createCommand)) return;
+    const newApp = apps.find(a => !appsAtCreationRef.current.has(a.path));
+    if (newApp) {
+      setCreatingApp(false);
+      setCreateCommand(null);
+      selectApp(newApp.path);
+    }
+  }, [apps, creatingApp, createCommand, selectApp]);
+
   // Track previous values for toast triggers
   const prevStatusRef = useRef<string | null>(null);
   const prevCompletedRef = useRef<number>(0);
