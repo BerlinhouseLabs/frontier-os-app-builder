@@ -16,8 +16,7 @@ Add a new feature to the current milestone. Infers required SDK modules, creates
 
 <execution_context>
 @$HOME/.claude/frontier-os-app-builder/workflows/add-feature.md
-@$HOME/.claude/frontier-os-app-builder/references/module-inference.md
-@$HOME/.claude/frontier-os-app-builder/references/sdk-surface.md
+@$HOME/.claude/frontier-os-app-builder/references/module-index.md
 </execution_context>
 
 <context>

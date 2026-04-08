@@ -24,9 +24,7 @@ Initialize a new Frontier OS app through guided flow: gather requirements, infer
 
 <execution_context>
 @$HOME/.claude/frontier-os-app-builder/workflows/new-app.md
-@$HOME/.claude/frontier-os-app-builder/references/sdk-surface.md
-@$HOME/.claude/frontier-os-app-builder/references/module-inference.md
-@$HOME/.claude/frontier-os-app-builder/references/app-patterns.md
+@$HOME/.claude/frontier-os-app-builder/references/module-index.md
 </execution_context>
 
 <context>

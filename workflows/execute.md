@@ -31,6 +31,13 @@ if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 
 Parse JSON for: `phase`, `phase_dir`, `plans`, `summaries`, `incomplete_plans`, `all_complete`, `manifest`, `state`, `project_path`, `roadmap_path`, `template_home`, `version`.
 
+**Generate focused SDK reference for this app's modules:**
+```bash
+MODULES=$(node -e "const m=JSON.parse(require('fs').readFileSync('.frontier-app/manifest.json','utf8')); console.log(m.modules.join(','))")
+SDK_REF=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" sdk-ref --modules "$MODULES")
+SDK_REF_PATH="${SDK_REF#@file:}"
+```
+
 **If .frontier-app/ not found:**
 ```
 Error: No .frontier-app/ directory found.
@@ -139,13 +146,13 @@ For each plan file in `incomplete_plans`:
        <execution_context>
        @$HOME/.claude/frontier-os-app-builder/workflows/execute-plan.md
        @$HOME/.claude/frontier-os-app-builder/templates/state/summary.md
-       @$HOME/.claude/frontier-os-app-builder/references/sdk-surface.md
        @$HOME/.claude/frontier-os-app-builder/references/app-patterns.md
        @$HOME/.claude/frontier-os-app-builder/references/verification-rules.md
        </execution_context>
 
        <files_to_read>
        Read these files at execution start using the Read tool:
+       - $SDK_REF_PATH (focused SDK reference for this app's modules)
        - $PHASE_DIR/[plan_file] (The plan to execute)
        - .frontier-app/PROJECT.md (App vision, SDK modules)
        - .frontier-app/manifest.json (Permissions)
@@ -292,13 +299,13 @@ When an executor agent returns a structured checkpoint (output contains `## CHEC
        <execution_context>
        @$HOME/.claude/frontier-os-app-builder/workflows/execute-plan.md
        @$HOME/.claude/frontier-os-app-builder/templates/state/summary.md
-       @$HOME/.claude/frontier-os-app-builder/references/sdk-surface.md
        @$HOME/.claude/frontier-os-app-builder/references/app-patterns.md
        @$HOME/.claude/frontier-os-app-builder/references/verification-rules.md
        </execution_context>
 
        <files_to_read>
        Read these files at execution start using the Read tool:
+       - $SDK_REF_PATH (focused SDK reference for this app's modules)
        - $PHASE_DIR/[plan_file] (The plan to execute)
        - .frontier-app/PROJECT.md (App vision, SDK modules)
        - .frontier-app/manifest.json (Permissions)

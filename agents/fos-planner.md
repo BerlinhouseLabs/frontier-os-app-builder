@@ -299,7 +299,7 @@ SDK Modules: [Which SDK modules are used, if any]
 @.frontier-app/STATE.md
 
 # SDK reference for modules used:
-@frontier-os-app-builder/references/sdk-surface.md
+# Provided via <files_to_read> in spawn prompt (focused per-module refs from references/sdk/)
 
 # Prior plan summaries if needed:
 @.frontier-app/phases/XX-name/NN-NN-SUMMARY.md
@@ -463,7 +463,8 @@ When spawned in revision mode with checker issues:
 </revision_mode>
 
 <sdk_reference>
-@frontier-os-app-builder/references/sdk-surface.md
+Focused SDK reference is provided via <files_to_read> in the spawn prompt.
+Contains only modules relevant to this app (from references/sdk/*.md).
 </sdk_reference>
 
 <app_patterns_reference>

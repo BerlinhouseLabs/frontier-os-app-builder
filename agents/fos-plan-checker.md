@@ -74,10 +74,10 @@ Then verify each level against the actual plan files.
 3. Check method signatures match (parameter types, return types)
 4. Verify the correct module accessor is used (e.g., `getWallet()` not `wallet()`)
 
-Feature phases access methods via `services.module.method()` (not `sdk.getModule().method()`). The method NAMES are the same — validate against sdk-surface.md for correctness. The import path should be `../lib/frontier-services`, not `../lib/sdk-context`.
+Feature phases access methods via `services.module.method()` (not `sdk.getModule().method()`). The method NAMES are the same — validate against the per-module SDK reference files (references/sdk/*.md) for correctness. The import path should be `../lib/frontier-services`, not `../lib/sdk-context`.
 
 **Validation rules:**
-- Method must exist in @frontier-os-app-builder/references/sdk-surface.md
+- Method must exist in the focused SDK reference (provided via <files_to_read>)
 - Module accessor must use the correct getter: `sdk.getWallet()`, `sdk.getStorage()`, etc.
 - Parameter types must match SDK definitions (e.g., `bigint` for amounts, `string` for addresses)
 - Return types referenced in task must match SDK definitions
@@ -414,7 +414,8 @@ Return structured PASS/FAIL with issues list:
 </output_format>
 
 <sdk_reference>
-@frontier-os-app-builder/references/sdk-surface.md
+Focused SDK reference is provided via <files_to_read> in the spawn prompt.
+Contains only modules relevant to this app (from references/sdk/*.md).
 </sdk_reference>
 
 <verification_rules_reference>

@@ -19,7 +19,6 @@ Gather implementation decisions for a phase by identifying gray areas and discus
 
 <execution_context>
 @$HOME/.claude/frontier-os-app-builder/workflows/discuss.md
-@$HOME/.claude/frontier-os-app-builder/references/sdk-surface.md
 </execution_context>
 
 <context>

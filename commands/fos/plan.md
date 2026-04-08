@@ -23,8 +23,6 @@ Create execution plans for a phase by researching existing Frontier OS apps, the
 
 <execution_context>
 @$HOME/.claude/frontier-os-app-builder/workflows/plan.md
-@$HOME/.claude/frontier-os-app-builder/references/sdk-surface.md
-@$HOME/.claude/frontier-os-app-builder/references/app-patterns.md
 </execution_context>
 
 <context>

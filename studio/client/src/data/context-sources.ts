@@ -5,8 +5,8 @@
  * business model, community structure, and existing apps.
  *
  * They intentionally DO NOT duplicate SDK API details, which are already loaded
- * by the /fos:new-app workflow via sdk-surface.md, module-inference.md, and
- * app-patterns.md. Instead, these answer: "What does the developer need to know
+ * by the /fos:new-app workflow via per-module SDK refs (references/sdk/),
+ * module-index.md, and app-patterns.md. Instead, these answer: "What does the developer need to know
  * about the BUSINESS to build a great app?"
  */
 

@@ -561,7 +561,8 @@ Do NOT skip. Do NOT proceed to state updates if self-check fails.
 </self_check>
 
 <sdk_reference>
-@frontier-os-app-builder/references/sdk-surface.md
+Focused SDK reference is provided via <files_to_read> in the spawn prompt.
+Contains only modules relevant to this app (from references/sdk/*.md).
 </sdk_reference>
 
 <app_patterns_reference>

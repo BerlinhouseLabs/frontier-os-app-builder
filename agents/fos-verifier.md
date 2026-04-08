@@ -546,7 +546,8 @@ gaps: [list of failed check IDs, empty if passed]
 </verification_rules_reference>
 
 <sdk_reference>
-@frontier-os-app-builder/references/sdk-surface.md
+Focused SDK reference is provided via <files_to_read> in the spawn prompt.
+Contains only modules relevant to this app (from references/sdk/*.md).
 </sdk_reference>
 
 <app_patterns_reference>

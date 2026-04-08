@@ -16,7 +16,7 @@ Archive the current milestone and start a new one. Gathers new feature descripti
 
 <execution_context>
 @$HOME/.claude/frontier-os-app-builder/workflows/new-milestone.md
-@$HOME/.claude/frontier-os-app-builder/references/module-inference.md
+@$HOME/.claude/frontier-os-app-builder/references/module-index.md
 </execution_context>
 
 <context>

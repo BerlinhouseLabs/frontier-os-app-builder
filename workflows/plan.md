@@ -27,6 +27,13 @@ if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 
 Parse JSON for: `phase`, `phase_dir`, `has_context`, `has_research`, `existing_plans`, `manifest`, `state`, `project_path`, `roadmap_path`, `template_home`, `version`.
 
+**Generate focused SDK reference for this app's modules:**
+```bash
+MODULES=$(node -e "const m=JSON.parse(require('fs').readFileSync('.frontier-app/manifest.json','utf8')); console.log(m.modules.join(','))")
+SDK_REF=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" sdk-ref --modules "$MODULES")
+SDK_REF_PATH="${SDK_REF#@file:}"
+```
+
 **If .frontier-app/ not found:**
 ```
 Error: No .frontier-app/ directory found.
@@ -80,12 +87,12 @@ Task(
 
     <execution_context>
     @$HOME/.claude/frontier-os-app-builder/agents/fos-researcher.md
-    @$HOME/.claude/frontier-os-app-builder/references/sdk-surface.md
     @$HOME/.claude/frontier-os-app-builder/references/app-patterns.md
     </execution_context>
 
     <files_to_read>
     Read these files at execution start using the Read tool:
+    - $SDK_REF_PATH (focused SDK reference for this app's modules)
     - .frontier-app/PROJECT.md (App vision, SDK modules, constraints)
     - .frontier-app/manifest.json (Declared permissions and metadata)
     - .frontier-app/ROADMAP.md (Phase goal and requirements)
@@ -124,13 +131,13 @@ Task(
 
     <execution_context>
     @$HOME/.claude/frontier-os-app-builder/templates/state/plan.md
-    @$HOME/.claude/frontier-os-app-builder/references/sdk-surface.md
     @$HOME/.claude/frontier-os-app-builder/references/app-patterns.md
     @$HOME/.claude/frontier-os-app-builder/references/verification-rules.md
     </execution_context>
 
     <files_to_read>
     Read these files at execution start using the Read tool:
+    - $SDK_REF_PATH (focused SDK reference for this app's modules)
     - .frontier-app/PROJECT.md (App vision, SDK modules, constraints)
     - .frontier-app/manifest.json (Declared permissions and metadata)
     - .frontier-app/ROADMAP.md (Phase goal, success criteria, requirements)
@@ -142,7 +149,7 @@ Task(
     - Phase 1 (Scaffold + Standalone Shell): ALWAYS exactly 1 plan. Uses standalone templates: `frontier-services.tsx`, `layout-standalone.tsx`, `package-standalone.json`, `main-simple-standalone.tsx` (for simple apps), `vercel-standalone.json`.
     - SDK Integration phase: ALWAYS exactly 1 plan. Mechanical — adds SDK dependency, creates adapter, upgrades Layout. Minimal research needed.
     - Feature phases: 1-3 plans. Prefer fewer, larger plans over many small ones.
-    - Feature phase tasks reference `useServices()` from `../lib/frontier-services` for all service access. Method names are validated against `sdk-surface.md` for correctness.
+    - Feature phase tasks reference `useServices()` from `../lib/frontier-services` for all service access. Method names are validated against the focused SDK reference for correctness.
     - Each plan gets 2-3 tasks. Tasks are atomic — one clear action each.
     - Wave 1 = no dependencies. Wave 2 = depends on Wave 1. Usually 1 wave is enough.
     - Vertical slices: Plan 01 = Event listing (hook + component + route), NOT Plan 01 = All hooks.
