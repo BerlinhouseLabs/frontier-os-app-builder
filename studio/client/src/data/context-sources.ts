@@ -247,17 +247,3 @@ Note: Apps built with the /fos workflow use the SDK's postMessage bridge and do 
     ],
   },
 ];
-
-/** Build a combined context string from selected source IDs. */
-export function buildContextPrompt(selectedIds: Set<string>): string {
-  const blocks: string[] = [];
-  for (const cat of CONTEXT_CATEGORIES) {
-    for (const source of cat.sources) {
-      if (selectedIds.has(source.id)) {
-        blocks.push(`## ${source.label}\n${source.context}`);
-      }
-    }
-  }
-  if (blocks.length === 0) return '';
-  return blocks.join('\n\n');
-}

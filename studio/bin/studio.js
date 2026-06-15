@@ -9,6 +9,7 @@ const args = process.argv.slice(2);
 let port = 4983;
 let targetPath = null;
 let workspaceRoot = null;
+let host = '127.0.0.1';
 
 // Parse args
 for (let i = 0; i < args.length; i++) {
@@ -21,6 +22,9 @@ for (let i = 0; i < args.length; i++) {
     i++;
   } else if (args[i] === '--workspace' && args[i + 1]) {
     workspaceRoot = resolve(args[i + 1]);
+    i++;
+  } else if (args[i] === '--host' && args[i + 1]) {
+    host = args[i + 1];
     i++;
   } else if (args[i] === '--help' || args[i] === '-h') {
     console.log(`
@@ -35,6 +39,9 @@ for (let i = 0; i < args.length; i++) {
     path                Path to a Frontier OS app (defaults to the picker mode)
     --workspace <dir>   Directory to scan for apps (default: parent of cwd)
     --port <n>          Studio port (default: 4983)
+    --host <addr>       Bind address (default: 127.0.0.1, loopback only).
+                        Pass e.g. 0.0.0.0 to expose Studio on your LAN —
+                        only do this on a network you trust.
     -h, --help          Show this help
 
   Run this alongside Claude Code to see a live dashboard and preview
@@ -128,13 +135,23 @@ async function findPort(startPort) {
 async function main() {
   port = await findPort(port);
 
-  const { startStudio } = await import('../dist/server/index.js');
-  const studio = await startStudio({ workspaceRoot, initialAppDir, port });
+  if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') {
+    console.warn(
+      `\n  Warning: Frontier Studio will bind to ${host} (non-loopback).\n` +
+        `  It exposes a terminal that can run commands on this machine — only use\n` +
+        `  --host on a network you trust, and prefer an SSH tunnel for remote access.\n`,
+    );
+  }
 
-  // Auto-open browser
+  const { startStudio } = await import('../dist/server/index.js');
+  const studio = await startStudio({ workspaceRoot, initialAppDir, port, host });
+
+  // Auto-open browser. When bound to all interfaces, localhost still reaches
+  // the server; for a specific bind address, open that address directly.
   try {
     const open = (await import('open')).default;
-    await open(`http://localhost:${port}`);
+    const browserHost = host === '0.0.0.0' || host === '::' ? 'localhost' : host;
+    await open(`http://${browserHost}:${port}`);
   } catch {
     // open is optional
   }

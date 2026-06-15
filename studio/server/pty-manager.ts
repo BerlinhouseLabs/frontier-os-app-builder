@@ -1,4 +1,4 @@
-import { spawn, type IPty } from 'node-pty';
+import type { IPty } from 'node-pty';
 import { existsSync } from 'node:fs';
 
 export interface PtyManagerOptions {
@@ -26,8 +26,27 @@ export class PtyManager {
     this.opts = opts;
   }
 
-  start(): { command: string; args: string[] } {
+  async start(): Promise<{ command: string; args: string[] }> {
     if (this.pty) throw new Error('PtyManager already started');
+
+    // Lazy, optional load of the node-pty native addon. A static top-level
+    // import would crash the entire Studio server (dashboard + preview
+    // included) when the prebuilt binary does not match the user's Node ABI.
+    // Loading it here contains that failure to the terminal feature: the call
+    // site wraps start() in a try/catch that emits a `pty-error` to the client,
+    // so a failed load degrades to "terminal unavailable" while the dashboard
+    // and preview keep working.
+    let nodePty: typeof import('node-pty');
+    try {
+      nodePty = await import('node-pty');
+    } catch (err) {
+      throw new Error(
+        `Terminal unavailable: failed to load the node-pty native addon (${
+          err instanceof Error ? err.message : String(err)
+        }).`,
+      );
+    }
+    const { spawn } = nodePty;
 
     const cols = this.opts.cols ?? 80;
     const rows = this.opts.rows ?? 24;
