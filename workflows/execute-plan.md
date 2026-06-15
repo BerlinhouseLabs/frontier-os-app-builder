@@ -154,8 +154,8 @@ npx tsc --noEmit           # No TypeScript errors
 
 Also run FOS-specific validation:
 ```bash
-node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" validate structure
-node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" validate permissions
+node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" validate structure --phase "$PHASE"
+node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" validate permissions --phase "$PHASE"
 ```
 
 Document results for SUMMARY.md.

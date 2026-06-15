@@ -142,7 +142,7 @@ Plans:
 - `templates/app/vite.config.ts` → configured with app's dev port
 - `templates/app/frontier-services.tsx` → useServices() provider + mock services
 - `templates/app/layout-standalone.tsx` → dark theme shell with FrontierServicesProvider
-- `templates/app/main-simple-standalone.tsx` or `main-router.tsx` → entry point
+- `templates/app/main-router.tsx` → entry point
 - `templates/app/package-standalone.json` → dependencies without SDK
 - `templates/app/vercel-standalone.json` → SPA rewrite only (no CORS)
 - `templates/app/tsconfig.json` → TypeScript config

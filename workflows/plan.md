@@ -148,7 +148,7 @@ Task(
     </files_to_read>
 
     <planning_rules>
-    - Phase 1 (Scaffold + Standalone Shell): ALWAYS exactly 1 plan. Uses standalone templates: `frontier-services.tsx`, `layout-standalone.tsx`, `package-standalone.json`, `main-simple-standalone.tsx` (for simple apps), `vercel-standalone.json`.
+    - Phase 1 (Scaffold + Standalone Shell): ALWAYS exactly 1 plan. Uses standalone templates: `frontier-services.tsx`, `layout-standalone.tsx`, `package-standalone.json`, `main-router.tsx`, `vercel-standalone.json`.
     - SDK Integration phase: ALWAYS exactly 1 plan. Mechanical — adds SDK dependency, creates adapter, upgrades Layout. Minimal research needed.
     - Feature phases: 1-3 plans. Prefer fewer, larger plans over many small ones.
     - Feature phase tasks reference `useServices()` from `../lib/frontier-services` for all service access. Method names are validated against the focused SDK reference for correctness.

@@ -4,11 +4,13 @@ Maps app descriptions to Frontier SDK modules. The CLI (`fos-tools.cjs infer-mod
 
 ## Inference Algorithm
 
-1. Lowercase the description, split into tokens
-2. Match against trigger keywords for each SDK module (keywords listed in each module's reference file under references/sdk/)
-3. Always include: Storage, Chain (every app needs these)
-4. Include User if any interactive UI features
-5. Present inferred modules for user confirmation
+This mirrors `cmdInferModules` in `fos-tools.cjs` exactly:
+
+1. Lowercase the entire description (`description.toLowerCase()`) — no tokenization or word splitting.
+2. For each SDK module, substring-match its trigger keywords against the lowercased description with `String.includes()` (keywords are listed in each module's reference file under `references/sdk/`). Because matching is by substring, multi-word phrases like `send money`, `access control`, and `api key` work, and a keyword can match inside a larger word (e.g. `fund` matches within `refund`).
+3. Always include Storage and Chain (the base modules — every app needs these).
+4. Include User if User's own keywords match, or if any of Wallet, Events, Communities, Partnerships, or Offices matched. User is NOT added by ThirdParty, Navigation, Storage, or Chain alone.
+5. Present the inferred modules for user confirmation.
 
 ## Module Quick Reference
 

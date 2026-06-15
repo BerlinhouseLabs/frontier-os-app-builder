@@ -128,11 +128,12 @@ node $HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs scaffold <template>
 | `vite.config.ts` | `./vite.config.ts` |
 | `frontier-services.tsx` | `./src/lib/frontier-services.tsx` |
 | `layout-standalone.tsx` | `./src/views/Layout.tsx` |
-| `main-router.tsx` or `main-simple-standalone.tsx` | `./src/main.tsx` |
+| `main-router.tsx` | `./src/main.tsx` |
 | `router.tsx` | `./src/router.tsx` |
 | `index.css` | `./src/styles/index.css` |
 | `test-setup.ts` | `./src/test/setup.ts` |
 | `gitignore` | `./.gitignore` |
+| `public/` | `./public/` |
 
 **Critical scaffold requirements:**
 - `src/lib/frontier-services.tsx` — Exports `useServices()` with mock backend. Modified only during SDK Integration phase.
@@ -276,7 +277,7 @@ Access modules via `services.<module>` from `useServices()`. Property names matc
 **TIER 2 — SDK INTEGRATION PHASE ONLY:**
 7. **SDK access:** `useSdk()` hook from `src/lib/sdk-context.tsx`, used only inside `sdk-services.tsx` and `Layout.tsx`.
 8. **Iframe detection:** `isInFrontierApp()` check in Layout.tsx. Standalone mode shows fallback banner.
-9. **Provider wrapping:** In-frame, Layout wraps the app in `SdkProvider` AND bridges the SDK into `FrontierServicesProvider` (so `useServices()` resolves). SDK initialized once via useRef, destroyed on unmount.
+9. **Provider wrapping:** In-frame, Layout wraps the app in `SdkProvider` AND bridges the SDK into `FrontierServicesProvider` (so `useServices()` resolves). SDK created once in an effect and exposed via `useState`, destroyed on unmount.
 10. **Permissions:** Every SDK method used must have permission declared in manifest.json.
 11. **CORS:** vercel.json sets CORS for the production origin plus a CSP `frame-ancestors` listing the 3 Frontier OS origins (os.frontiertower.io, sandbox.os.frontiertower.io, localhost:5173) and security headers. Copy templates/app/vercel.json verbatim.
 12. **SDK imports:** Use `@frontiertower/frontier-sdk` for SDK classes. Exact import paths, not barrel imports.

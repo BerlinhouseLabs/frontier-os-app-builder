@@ -350,8 +350,8 @@ Task(
 
     <verification_commands>
     Run these checks:
-    - node '$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs' validate structure
-    - node '$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs' validate permissions
+    - node '$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs' validate structure --phase "$PHASE"
+    - node '$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs' validate permissions --phase "$PHASE"
     - npx tsc --noEmit (if app source exists)
     - npm run build (if package.json exists)
     </verification_commands>

@@ -121,7 +121,7 @@ Phase 1 ALWAYS produces a single plan that scaffolds the entire app. This plan u
 - `vite.config.ts` — Vite + Vitest config (parameterized: APP_NAME)
 - `frontier-services.tsx` — Service layer with mock implementations (parameterized: modules used)
 - `layout-standalone.tsx` — Shell layout for standalone mode (parameterized: APP_NAME)
-- `main-router.tsx` or `main-simple-standalone.tsx` — React root (choose based on routing needs)
+- `main-router.tsx` — React root (router entry; all apps use the router)
 - `router.tsx` — Route definitions (parameterized: routes)
 - `index.css` — Tailwind + dark theme variables (parameterized: app colors)
 - `test-setup.ts` — Vitest setup (identical across apps)
@@ -142,7 +142,7 @@ Phase 1 ALWAYS produces a single plan that scaffolds the entire app. This plan u
 **Phase 1 BLOCKLIST — NEVER include these in a scaffold plan:**
 - ❌ `sdk-context.tsx` — this file is created during SDK Integration phase, NOT Phase 1
 - ❌ `layout.tsx` template — use `layout-standalone.tsx` instead (no iframe detection, no SdkProvider)
-- ❌ `main-simple.tsx` template — use `main-simple-standalone.tsx` instead
+- ❌ single-component entries — use `main-router.tsx` instead (all apps use the router; no single-component entry)
 - ❌ `package.json` template — use `package-standalone.json` instead (no SDK dependency)
 - ❌ `vercel.json` template — use `vercel-standalone.json` instead (no CORS headers)
 - ❌ `@frontiertower/frontier-sdk` in dependencies — SDK is added during SDK Integration phase

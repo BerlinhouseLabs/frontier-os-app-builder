@@ -205,7 +205,7 @@ issue:
    - ❌ `layout.tsx` template (without `-standalone`) — use `layout-standalone.tsx`
    - ❌ `package.json` template (without `-standalone`) — use `package-standalone.json`
    - ❌ `vercel.json` template (without `-standalone`) — use `vercel-standalone.json`
-   - ❌ `main-simple.tsx` template (without `-standalone`) — use `main-simple-standalone.tsx`
+   - ❌ single-component entries — use `main-router.tsx` instead (all apps use the router)
 
    If the researcher recommended SDK patterns from production apps, the planner should NOT have included them in Phase 1. Flag as blocker with fix hint: "Phase 1 is standalone-first. Remove SDK artifacts and use standalone templates."
 

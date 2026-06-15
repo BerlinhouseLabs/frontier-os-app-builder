@@ -42,8 +42,9 @@ SDK Modules: [Which SDK modules are used in this plan, if any]
 @.frontier-app/ROADMAP.md
 @.frontier-app/STATE.md
 
-# SDK reference for modules used in this plan:
-@frontier-sdk/docs/[module].md
+# Feature phases consume the mock service layer (useServices) — no SDK docs in <context>.
+# SDK module docs are referenced ONLY in the final SDK Integration plan, via:
+# @frontier-os-app-builder/references/sdk/[module].md
 
 # Only reference prior plan SUMMARYs if genuinely needed:
 # - This plan uses types/exports from prior plan
@@ -88,7 +89,7 @@ SDK Modules: [Which SDK modules are used in this plan, if any]
   <how-to-verify>Visit http://localhost:{{DEV_PORT}} and verify:
   - [Visual check 1]
   - [Visual check 2]
-  Open Frontier OS at localhost:3000 and verify app loads in iframe.</how-to-verify>
+  (SDK Integration phase only) Open Frontier OS at localhost:3000 and verify the app loads in the iframe.</how-to-verify>
   <resume-signal>Type "approved" or describe issues</resume-signal>
 </task>
 
@@ -136,26 +137,43 @@ After completion, create `.frontier-app/phases/XX-name/{phase}-{plan}-SUMMARY.md
 
 ## Frontier OS Specifics
 
-**Phase 1 plans always include:**
+**Phase 1 (scaffold) plans always include — standalone-first:**
 - Vite scaffold from `templates/app/vite.config.ts`
-- SdkProvider from `templates/app/sdk-context.tsx`
-- Layout with iframe detection from `templates/app/layout.tsx`
-- Dark theme setup via Tailwind
-- Standalone fallback UI
+- `FrontierServicesProvider` + mock services from `templates/app/frontier-services.tsx` → `src/lib/frontier-services.tsx` (feature code calls `useServices()`)
+- Layout from `templates/app/layout-standalone.tsx` → `src/views/Layout.tsx` (NO iframe detection, NO SdkProvider)
+- Entry from `templates/app/main-router.tsx` (router entry — all apps use the router)
+- Dark theme via Tailwind 4 `@theme` in `src/styles/index.css` (CSS-only — no `tailwind.config`)
+- Standalone UI rendering with mock data
 - Dev server on assigned port
 
-**SDK usage in tasks:**
-- Always specify the exact import: `import { FrontierSDK } from '@frontiertower/frontier-sdk'`
-- Always use `useSdk()` hook, never instantiate SDK directly in components
-- Always wrap SDK calls in try/catch — SDK may not be available in standalone mode
-- Reference the specific SDK module docs in `<context>` section
+**Phase 1 BLOCKLIST — NEVER include these in a scaffold plan:**
+- ❌ `sdk-context.tsx` — this file is created during SDK Integration phase, NOT Phase 1
+- ❌ `layout.tsx` template — use `layout-standalone.tsx` instead (no iframe detection, no SdkProvider)
+- ❌ single-component entries — use `main-router.tsx` instead (all apps use the router; no single-component entry)
+- ❌ `package.json` template — use `package-standalone.json` instead (no SDK dependency)
+- ❌ `vercel.json` template — use `vercel-standalone.json` instead (no CORS headers)
+- ❌ `@frontiertower/frontier-sdk` in dependencies — SDK is added during SDK Integration phase
+- ❌ `isInFrontierApp()` or `createStandaloneHTML()` in Layout — these are SDK Integration concerns
+- ❌ `SdkProvider` wrapping — use `FrontierServicesProvider` instead
+- ❌ `useSdk()` — use `useServices()` instead
+- ❌ Any import from `@frontiertower/frontier-sdk` — the SDK package does not exist in Phase 1
+
+**Service usage in feature phases (Phase 2+):**
+- Call service methods through the mock seam: `services.<module>.<method>()` (e.g. `services.wallet.getBalance()`)
+- Always obtain services via `useServices()` — `import { useServices } from '../lib/frontier-services'`
+- Wrap service calls in try/catch and handle loading/error states
+- Never import `@frontiertower/frontier-sdk` or call `useSdk()` in feature code
+- The `FrontierSDK` import + `useSdk()` pattern belongs ONLY to the final SDK Integration phase
 
 **Verification always includes:**
 - Build succeeds (`npm run build`)
 - Dev server starts on correct port
 - No TypeScript errors
 - Dark theme renders correctly (no white backgrounds)
-- App works in both iframe and standalone modes
+- Standalone renders with mock services (`useServices()` resolves)
+
+**SDK Integration tier (final phase) additionally verifies:**
+- App works in both iframe and standalone modes (in-frame `services.*` resolve via the SDK bridge)
 
 ---
 
