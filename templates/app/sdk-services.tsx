@@ -30,6 +30,7 @@ function notAvailable(module: string): never {
 }
 
 export function createSdkServices(sdk: FrontierSDK): FrontierServices {
+  void sdk; // marks `sdk` used while modules are still stubs; remove once you wire one below (e.g. sdk.getWallet())
   // ── Wire modules your app uses ──────────────────────────────
   // Replace the Proxy stubs below with real SDK adapter objects
   // for each module declared in manifest.json.

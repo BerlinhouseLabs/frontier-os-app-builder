@@ -559,7 +559,7 @@ export interface WalletService {
 }
 
 export interface StorageService {
-  get<T = any>(key: string): Promise<T>;
+  get<T = any>(key: string): Promise<T | null>;
   set(key: string, value: any): Promise<void>;
   remove(key: string): Promise<void>;
   clear(): Promise<void>;
@@ -718,7 +718,7 @@ export function createMockServices(): FrontierServices {
   };
 
   const storage: StorageService = {
-    async get<T = any>(key: string): Promise<T> {
+    async get<T = any>(key: string): Promise<T | null> {
       mockLog('storage', 'get');
       const raw = localStorage.getItem(MOCK_PREFIX + key);
       return raw ? JSON.parse(raw) : null;
