@@ -48,7 +48,7 @@ Before verifying, load project context:
 <core_principle>
 **Plan completeness =/= Goal achievement**
 
-A task "create balance display" can be in the plan while the SDK method `getBalanceFormatted()` is called with wrong arguments. The task exists but the goal "show user's balance" won't be achieved.
+A task "create balance display" can be in the plan while the SDK method `getBalance()` is called with wrong arguments. The task exists but the goal "show user's balance" won't be achieved.
 
 Goal-backward verification works backwards from outcome:
 
@@ -86,17 +86,17 @@ Feature phases access methods via `services.module.method()` (not `sdk.getModule
 - Method name doesn't exist in SDK (e.g., `getTokenBalance()` instead of `getBalance()`)
 - Wrong module (e.g., `sdk.getUser().getBalance()` instead of `sdk.getWallet().getBalance()`)
 - Wrong parameter types (e.g., `number` instead of `bigint` for token amounts)
-- Invented types not in SDK (e.g., `BalanceInfo` instead of `WalletBalanceFormatted`)
+- Invented types not in SDK (e.g., `BalanceInfo` instead of `WalletBalance`)
 
 **Example issue:**
 ```yaml
 issue:
   dimension: sdk_method_correctness
   severity: blocker
-  description: "Task 2 references sdk.getWallet().getTokenBalance() — method does not exist. Use getBalance() or getBalanceFormatted()"
+  description: "Task 2 references sdk.getWallet().getTokenBalance() — method does not exist. Use getBalance()"
   plan: "02-01"
   task: 2
-  fix_hint: "Replace getTokenBalance() with getBalanceFormatted() — returns WalletBalanceFormatted with .total, .fnd, .internalFnd string fields"
+  fix_hint: "Replace getTokenBalance() with getBalance() — returns WalletBalance with .total, .fnd, .internalFnd bigint fields; format each with formatAmount() from '@frontiertower/frontier-sdk'"
 ```
 
 ## Dimension 2: Permission Alignment
@@ -128,10 +128,10 @@ For feature phases: permission mismatches are severity **warning** (permissions 
 issue:
   dimension: permission_alignment
   severity: blocker
-  description: "Task 1 calls sdk.getWallet().getBalanceFormatted() but manifest.json does not declare wallet:getBalanceFormatted permission"
+  description: "Task 1 calls sdk.getWallet().getBalance() but manifest.json does not declare wallet:getBalance permission"
   plan: "02-01"
   task: 1
-  fix_hint: "Add 'wallet:getBalanceFormatted' to permissions array in manifest.json, or add a task to update manifest"
+  fix_hint: "Add 'wallet:getBalance' to permissions array in manifest.json, or add a task to update manifest"
 ```
 
 ## Dimension 3: File Structure Compliance

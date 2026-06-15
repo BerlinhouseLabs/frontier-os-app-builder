@@ -38,6 +38,27 @@ createRoomBooking(payload: CreateRoomBookingRequest): Promise<RoomBooking>
 ```
 Create a room booking. Location must be of type `'room'`. Permission: `events:createRoomBooking`
 
+```typescript
+getCryptoDepositPreflight(payload: { eventId: number }): Promise<DepositPreflight>
+```
+Preflight an event's FND security deposit. Host only, read-only. Returns the spender plus candidate ERC-20 tokens (iFND first, then FND) with on-chain decimals and base-unit amounts so you can approve the allowance BEFORE placing the deposit. Throws if not authenticated, not the host, or no deposit is required. Permission: `events:getCryptoDepositPreflight`
+
+```typescript
+placeCryptoDeposit(payload: { eventId: number }): Promise<DepositResult>
+```
+Place the FND security deposit. The backend `transferFrom`s the stablecoin from the member's smart account into treasury; the member must first approve the allowance to the preflight `spender` via `getWallet().approveERC20(token.address, spender, BigInt(token.baseUnits))`. Returns `status: 'secured'` (`reference` is the tx hash) or `'awaiting_payment'` (read `statusReason`, fix, retry). Host only. Permission: `events:placeCryptoDeposit`
+
+**Canonical 3-step deposit flow** (host only):
+```typescript
+// 1. Preflight — discover the spender + candidate tokens (iFND first, then FND)
+const { spender, tokens } = await sdk.getEvents().getCryptoDepositPreflight({ eventId: 42 });
+const token = tokens[0]; // prefer iFND; fall back to tokens[1] (FND) if the member lacks iFND
+// 2. Approve the allowance to the spender (on-chain; the member confirms in the wallet)
+await sdk.getWallet().approveERC20(token.address, spender, BigInt(token.baseUnits));
+// 3. Place the deposit — the backend transferFroms it into treasury
+const result = await sdk.getEvents().placeCryptoDeposit({ eventId: 42 });
+```
+
 ---
 
 ## Types
@@ -48,6 +69,12 @@ type EventService = 'luma' | 'private' | 'test';
 type ReviewStatus = 'not_required' | 'approved' | 'rejected' | 'pending';
 type EventStatus = 'active' | 'suspended' | 'archived';
 type LocationType = 'event_space' | 'room';
+
+// Compact deposit status on the Event payload (host UI gating). 7 values.
+type DepositStatus = 'not_required' | 'required' | 'pending' | 'secured' | 'released' | 'withheld' | 'failed';
+
+// Raw status returned by placeCryptoDeposit. 6 values — has 'awaiting_payment' + 'grant', lacks 'not_required'/'required'/'pending'.
+type CryptoDepositStatus = 'secured' | 'awaiting_payment' | 'grant' | 'released' | 'withheld' | 'failed';
 
 interface Event {
   id: number;
@@ -69,6 +96,8 @@ interface Event {
   color: string;
   reviewStatus: ReviewStatus;
   status: EventStatus;
+  isHost?: boolean;                 // True iff the requesting user is this event's host (the user the deposit endpoints authorize)
+  deposit?: EventDeposit | null;    // Read-only security-deposit summary, null when no deposit row
 }
 
 interface ListEventsParams {
@@ -133,11 +162,43 @@ interface CreateRoomBookingRequest {
   endsAt: string;         // ISO 8601
   location: string;       // readable_id (must be room type)
 }
+
+interface EventDeposit {
+  status: DepositStatus;
+  amount: number;         // snapshotted deposit amount in `currency` (e.g. 400 for the FND rail)
+  currency: string;       // e.g. "usd"
+}
+
+interface DepositPreflightToken {
+  key: string;            // e.g. "ifnd_token" or "fnd_token"
+  address: string;        // ERC-20 contract to approve the allowance on
+  decimals: number;       // on-chain token decimals (read from the contract, never assumed)
+  baseUnits: string;      // deposit amount in this token's base units, as a decimal string (wrap in BigInt() for approveERC20)
+}
+
+interface DepositPreflight {
+  spender: string;        // address to approve the allowance to (treasury) — never hardcode it
+  network: string;        // e.g. "base" (prod) or "base_sepolia" (sandbox)
+  amount: string;         // deposit amount in `currency`, as a decimal string (e.g. "400.00")
+  currency: string;       // e.g. "usd"
+  tokens: DepositPreflightToken[];  // candidate tokens in preference order: iFND first, then FND
+}
+
+interface DepositResult {
+  provider: 'crypto';     // always 'crypto' on this rail
+  status: CryptoDepositStatus;
+  amount: string;         // deposit amount in `currency`, as a decimal string
+  currency: string;       // e.g. "usd"
+  reference: string;      // on-chain tx hash when secured; empty otherwise
+  statusReason: string;   // human-readable reason when not secured (e.g. insufficient iFND/FND allowance or balance)
+}
 ```
+
+> **Deposit notes:** `DepositStatus` (7 values, carried on the `Event` payload) DIFFERS from `CryptoDepositStatus` (6 values, returned by `placeCryptoDeposit` — it adds `awaiting_payment` + `grant` and drops `not_required`/`required`/`pending`). `DepositPreflightToken.baseUnits` is a decimal STRING — wrap it via `BigInt()` for `approveERC20`. Never hardcode `spender` or token addresses, and read on-chain `decimals` rather than assuming 6.
 
 ---
 
-## Permissions (6)
+## Permissions (8)
 
 | Permission | Description |
 |---|---|
@@ -147,3 +208,5 @@ interface CreateRoomBookingRequest {
 | `events:listLocations` | List available locations (event spaces and rooms) |
 | `events:listRoomBookings` | List room bookings (paginated) |
 | `events:createRoomBooking` | Create a room booking |
+| `events:getCryptoDepositPreflight` | Preflight an event's FND security deposit (spender, candidate tokens, amounts) before approving the allowance |
+| `events:placeCryptoDeposit` | Place an event's FND security deposit (backend transferFrom from the member's smart account) |

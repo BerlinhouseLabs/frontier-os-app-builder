@@ -32,7 +32,7 @@ This workflow runs inside a subagent — it does not spawn further subagents.
 8. **Iframe detection:** `isInFrontierApp()` check in Layout.tsx. Standalone mode shows fallback banner.
 9. **SdkProvider wrapping:** Entire app wrapped in SdkProvider when inside iframe. SDK initialized once via useRef, destroyed on unmount.
 10. **Permissions:** Every SDK method used must have its permission declared in manifest.json.
-11. **CORS:** vercel.json must include all 5 Frontier OS origins (os.frontiertower.io, sandbox.os.frontiertower.io, alpha.os.frontiertower.io, beta.os.frontiertower.io, localhost:5173).
+11. **CORS:** vercel.json must include all 3 Frontier OS origins (os.frontiertower.io, sandbox.os.frontiertower.io, localhost:5173).
 12. **SDK imports:** Use `@frontiertower/frontier-sdk` for SDK classes and types. Exact import paths, not barrel imports.
 </frontier_os_rules>
 

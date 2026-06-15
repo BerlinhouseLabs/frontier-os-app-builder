@@ -70,54 +70,6 @@ All Frontier OS apps deploy to Vercel. The `vercel.json` file is identical acros
         {
           "type": "header",
           "key": "Origin",
-          "value": "https://alpha.os.frontiertower.io"
-        }
-      ],
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://alpha.os.frontiertower.io"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "header",
-          "key": "Origin",
-          "value": "https://beta.os.frontiertower.io"
-        }
-      ],
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://beta.os.frontiertower.io"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "header",
-          "key": "Origin",
           "value": "http://localhost:5173"
         }
       ],
@@ -140,25 +92,23 @@ All Frontier OS apps deploy to Vercel. The `vercel.json` file is identical acros
 }
 ```
 
-### Why 5 Separate Blocks
+### Why Separate Blocks (one per origin)
 
-Vercel does not support multiple values in a single `Access-Control-Allow-Origin` header. Each allowed origin requires its own conditional header block using the `has` matcher. The `has` condition checks the incoming `Origin` request header and only attaches the CORS response headers when the origin matches.
+Vercel does not support multiple values in a single `Access-Control-Allow-Origin` header. Each of the 3 allowed origins requires its own conditional header block using the `has` matcher. The `has` condition checks the incoming `Origin` request header and only attaches the CORS response headers when the origin matches.
 
 ---
 
 ## Allowed Origins
 
-The Frontier Wallet PWA runs at these 5 origins. Apps must allow CORS from all of them:
+The Frontier Wallet PWA runs at these 3 origins. Apps must allow CORS from all of them:
 
 | Origin                                    | Environment  | Description                                                    |
 | ----------------------------------------- | ------------ | -------------------------------------------------------------- |
 | `http://localhost:5173`                   | Development  | Local Vite dev server for the PWA                              |
 | `https://sandbox.os.frontiertower.io`     | Sandbox      | Sandbox environment                                            |
-| `https://alpha.os.frontiertower.io`       | Alpha        | Early access / design preview                                  |
-| `https://beta.os.frontiertower.io`        | Beta         | QA'd, pre-production                                           |
 | `https://os.frontiertower.io`             | Production   | Production ready                                               |
 
-These origins are also hardcoded in the SDK at `@frontiertower/frontier-sdk/ui-utils/detection.ts` as `ALLOWED_ORIGINS`.
+These origins are also hardcoded in the SDK at `@frontiertower/frontier-sdk/ui-utils/detection.ts` as `ALLOWED_ORIGINS` (exactly these 3). Note: `isInFrontierApp()` no longer consults this list -- it returns `window.self !== window.top` -- so `ALLOWED_ORIGINS` is informational for CORS/CSP only.
 
 The `isInFrontierApp()` function checks `window.self !== window.top` to detect if the app is running inside the Frontier Wallet iframe. The `getParentOrigin()` function resolves the parent frame's origin via `document.referrer` or `window.parent.location.origin`.
 
@@ -172,7 +122,7 @@ In addition to CORS, all deployment targets should include:
 
 | Header                       | Recommended Value                                  | Purpose                                     |
 | ---------------------------- | -------------------------------------------------- | ------------------------------------------- |
-| `Content-Security-Policy`    | Include `frame-ancestors` for all 5 Frontier origins | Prevents embedding by unauthorized sites   |
+| `Content-Security-Policy`    | Include `frame-ancestors https://os.frontiertower.io https://sandbox.os.frontiertower.io http://localhost:5173` (the 3 live origins) | Prevents embedding by unauthorized sites   |
 | `X-Content-Type-Options`     | `nosniff`                                          | Prevents MIME-type sniffing                 |
 | `Referrer-Policy`            | `strict-origin-when-cross-origin`                  | Controls referrer information leakage       |
 | `Permissions-Policy`         | Disable unnecessary browser APIs                   | Reduces attack surface                      |
@@ -192,7 +142,7 @@ The recommended way is to use the OS Developer app in the Frontier AppStore. The
 1. **Get developer access** -- contact support@frontiertower.io to be added as a developer manager.
 2. **Get your developer profile** -- install the OS Developer app from the AppStore, or call `GET /third-party/developers/`.
 3. **Rotate your API key** immediately after receiving it: `POST /third-party/developers/{developer_id}/rotate-key/`. Store the new key securely.
-4. **Create the app** -- via OS Developer or `POST /third-party/apps/` with metadata: `name`, `url`, `description`, optional DNS entries.
+4. **Create the app** -- via OS Developer (`sdk.getThirdParty().createApp(...)`) or `POST /third-party/apps/` with body `{ url, cnameEntry, txtEntry?, permissions: string[], permissionDisclaimer }` (OS Developer additionally sends `developer: <id>`). App `name`, `description`, and `icon` are NOT sent -- they are auto-fetched from the app URL's HTML metadata (`<title>`, `<meta name="description">`, `<link rel="icon">`).
 
 ### App Status Lifecycle
 
@@ -217,24 +167,29 @@ When registering, declare the SDK permissions your app requires:
 ```typescript
 const APP_REGISTRY: AppMetadata[] = [
   {
-    id: 'my-app',
-    url: 'https://my-app.appstore.frontiertower.io',
-    origin: 'https://my-app.appstore.frontiertower.io',
-    version: '1.0.0',
+    id: 'ifnd-converter',
+    url: 'https://ifnd-converter.apps.frontiertower.io',
+    icon: '/svgs/ifnd_converter.svg',
     developer: {
       name: 'Developer Name',
-      verified: true,
+      url: 'https://frontiertower.io',
+      description: 'Made with love by the Frontier Tower Action Team',
     },
-    permissions: {
-      wallet: true,
-      storage: true,
-      notifications: false,
-    },
+    permissions: [
+      'wallet:getBalance',
+      'wallet:getAddress',
+      'wallet:executeBatchCall',
+      'wallet:executeCall',
+      'chain:getCurrentChainConfig',
+    ],
+    permissionDisclaimer:
+      'This app accesses your wallet address and balance and executes the conversion calls.',
+    // optional: excludedAppStages?, requiresCitizenship?, requiresAdmin?
   } as AppMetadata,
 ];
 ```
 
-Permissions must match the SDK methods actually called in source code. The fos-verifier agent enforces this (see [verification-rules.md](verification-rules.md)).
+Permissions are a flat array of `module:method` strings -- each entry must match an SDK method actually called in source code. `name`, `description`, and `icon` are optional in `AppMetadata` (auto-fetched from the app's HTML when omitted). There is no `origin`, `version`, or `developer.verified` field, and there is no `notifications` permission. The fos-verifier agent enforces the permission-to-source match (see [verification-rules.md](verification-rules.md)).
 
 ---
 
@@ -260,15 +215,15 @@ VITE_API_URL=https://api.example.com
 
 ## DNS Configuration
 
-Apps are hosted on the `appstore.frontiertower.io` subdomain.
+Apps are hosted on the `apps.frontiertower.io` subdomain.
 
 ### Domain Pattern
 
 ```
-<app-name>.appstore.frontiertower.io
+<app-name>.apps.frontiertower.io
 ```
 
-Example: `kickstarter.appstore.frontiertower.io`
+Example: `kickstarter.apps.frontiertower.io`
 
 ### DNS Entries
 
@@ -276,12 +231,12 @@ Two DNS records are needed:
 
 1. **CNAME** -- points the subdomain to the Vercel deployment:
    ```
-   <app-name>.appstore.frontiertower.io  CNAME  cname.vercel-dns.com
+   <app-name>.apps.frontiertower.io  CNAME  cname.vercel-dns.com
    ```
 
 2. **TXT** -- Vercel domain verification:
    ```
-   _vercel.<app-name>.appstore.frontiertower.io  TXT  vc-domain-verify=<token>
+   _vercel.<app-name>.apps.frontiertower.io  TXT  vc-domain-verify=<token>
    ```
 
 Configure the custom domain in the Vercel dashboard after DNS propagation. Vercel automatically provisions an SSL certificate.
@@ -381,7 +336,7 @@ Call `POST /third-party/webhooks/{webhook_id}/rotate-key/`. Deliveries immediate
 After deploying, verify CORS is working:
 
 ```bash
-curl -I https://<app-name>.appstore.frontiertower.io \
+curl -I https://<app-name>.apps.frontiertower.io \
   -H "Origin: https://os.frontiertower.io"
 
 # Should include:

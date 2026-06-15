@@ -270,8 +270,8 @@ const MODULE_KEYWORDS = {
                'withdraw', 'off-ramp', 'bank', 'fiat', 'subscription', 'billing', 'price',
                'cost', 'fee', 'tip', 'donate', 'donation'],
     getter: 'sdk.getWallet()',
-    commonMethods: ['getBalance', 'getBalanceFormatted', 'transferFrontierDollar', 'transferOverallFrontierDollar'],
-    permissions: ['wallet:getBalance', 'wallet:getBalanceFormatted', 'wallet:getAddress',
+    commonMethods: ['getBalance', 'transferFrontierDollar', 'transferOverallFrontierDollar'],
+    permissions: ['wallet:getBalance', 'wallet:getAddress',
                   'wallet:transferFrontierDollar', 'wallet:transferOverallFrontierDollar']
   },
   User: {
@@ -287,9 +287,11 @@ const MODULE_KEYWORDS = {
                'reserve', 'reservation', 'space', 'venue', 'location', 'conference',
                'meeting', 'coworking'],
     getter: 'sdk.getEvents()',
-    commonMethods: ['listEvents', 'createEvent', 'listLocations', 'createRoomBooking'],
+    commonMethods: ['listEvents', 'createEvent', 'listLocations', 'createRoomBooking',
+                    'getCryptoDepositPreflight', 'placeCryptoDeposit'],
     permissions: ['events:listEvents', 'events:createEvent', 'events:listLocations',
-                  'events:listRoomBookings', 'events:createRoomBooking']
+                  'events:listRoomBookings', 'events:createRoomBooking',
+                  'events:getCryptoDepositPreflight', 'events:placeCryptoDeposit']
   },
   Communities: {
     keywords: ['community', 'group', 'team', 'club', 'internship', 'intern', 'cohort',

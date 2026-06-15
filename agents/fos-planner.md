@@ -161,8 +161,8 @@ Feature phases create plans with tasks for:
 - **Tests** — Vitest tests for hooks and components
 
 **Task specificity requirements:**
-- Name exact service methods: `services.wallet.getBalanceFormatted()` not "get balance"
-- Name exact types: `WalletBalanceFormatted` not "balance type"
+- Name exact service methods: `services.wallet.getBalance()` not "get balance"
+- Name exact types: `WalletBalance` not "balance type"
 - Name exact file paths: `src/hooks/useBalance.ts` not "a balance hook"
 - Name exact Tailwind classes: `bg-card text-card-foreground rounded-lg p-4` not "styled card"
 - Name exact imports: `import { useServices } from '../lib/frontier-services'` not "import services"
@@ -179,7 +179,7 @@ The SDK Integration phase is ALWAYS the last phase. It is mechanical — no feat
 3. **Create sdk-services.tsx** — Render from `templates/app/sdk-services.tsx` to `src/lib/sdk-services.tsx`. Adapter mapping FrontierServices interface to real SDK calls via useSdk().
 4. **Upgrade frontier-services.tsx** — Modify `src/lib/frontier-services.tsx` to detect environment: `window.self !== window.top`. If in iframe → import and use sdk-services adapter. If standalone → use existing mock services. Import `isInFrontierApp` from `@frontiertower/frontier-sdk/ui-utils`.
 5. **Upgrade Layout.tsx** — Follow standard Layout pattern from `templates/app/layout.tsx`: add `isInFrontierApp()` detection, `createStandaloneHTML()` fallback, `SdkProvider` wrapping of `<Outlet />`.
-6. **Add CORS origins to vercel.json** — Replace with full `templates/app/vercel.json` content (adds all 5 Frontier OS origin blocks).
+6. **Add CORS origins to vercel.json** — Replace with full `templates/app/vercel.json` content (adds the 3 Frontier OS origin blocks).
 7. **Verify** — Build passes (`npm run build`), typecheck passes (`npx tsc --noEmit`), all verification rules pass including Tier 2.
 
 **Success criteria (fixed, not user-determined):**
@@ -187,7 +187,7 @@ The SDK Integration phase is ALWAYS the last phase. It is mechanical — no feat
 2. `src/lib/sdk-services.tsx` exists and maps all used service methods to real SDK calls
 3. `src/lib/frontier-services.tsx` detects iframe and routes to SDK adapter
 4. `src/views/Layout.tsx` has `isInFrontierApp()` detection and `SdkProvider` wrapping
-5. `vercel.json` has all 5 CORS origin blocks
+5. `vercel.json` has the 3 CORS origin blocks
 6. `npm run build` succeeds
 7. `npx tsc --noEmit` passes
 
@@ -209,22 +209,22 @@ Every task has six required fields:
 - Rule: At minimum, include the files this task's code will import from or integrate with.
 
 **<action>:** Specific implementation instructions with CONCRETE SDK values.
-- Good: "Create `useBalance` hook that calls `services.wallet.getBalanceFormatted()` returning `WalletBalanceFormatted`. Handle loading/error states with useState. The hook returns `{ balance: WalletBalanceFormatted | null, loading: boolean, error: string | null }`. Import `useServices` from `../lib/frontier-services`. Wrap the service call in try/catch. Call in a useEffect with `[services]` dependency."
+- Good: "Create `useBalance` hook that calls `services.wallet.getBalance()` returning `WalletBalance` (bigint fields `total`/`fnd`/`internalFnd`), formatting for display via `formatAmount` imported from `@frontiertower/frontier-sdk`. Handle loading/error states with useState. The hook returns `{ balance: WalletBalance | null, loading: boolean, error: string | null }`. Import `useServices` from `../lib/frontier-services`. Wrap the service call in try/catch. Call in a useEffect with `[services]` dependency."
 - Bad: "Create a hook that fetches the balance"
 
 **<verify>:** How to prove the task is complete.
-- Good: `grep -q "getBalanceFormatted" src/hooks/useBalance.ts && npx tsc --noEmit`
+- Good: `grep -q "getBalance" src/hooks/useBalance.ts && npx tsc --noEmit`
 - Bad: "It works"
 
 **<acceptance_criteria>:** Grep-verifiable conditions the executor checks programmatically. Every task MUST include this field.
 - Good:
-  - `grep -q "getBalanceFormatted" src/hooks/useBalance.ts`
+  - `grep -q "getBalance" src/hooks/useBalance.ts`
   - `grep -q "loading" src/hooks/useBalance.ts`
   - `npx tsc --noEmit` exits 0
 - Bad: "It compiles", or omitting acceptance_criteria entirely
 
 **<done>:** Acceptance criteria — measurable state of completion.
-- Good: "`useBalance.ts` exports a hook that returns `{ balance, loading, error }`. TypeScript compiles without errors. The hook calls `getBalanceFormatted()` with proper error handling."
+- Good: "`useBalance.ts` exports a hook that returns `{ balance, loading, error }`. TypeScript compiles without errors. The hook calls `getBalance()` and formats with `formatAmount()`, with proper error handling."
 - Bad: "Balance hook is complete"
 
 ## Task Types

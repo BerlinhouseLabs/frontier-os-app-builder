@@ -24,4 +24,4 @@ Most list methods accept `PaginatedParams` (or a superset) and return `Paginated
 
 ## Total Permissions Count
 
-84 permissions across 10 modules. See each module's reference file for its specific permissions.
+85 permissions across 10 modules. See each module's reference file for its specific permissions.
