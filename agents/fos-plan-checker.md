@@ -357,8 +357,8 @@ issue:
 1. Plan includes task to add `@frontiertower/frontier-sdk` dependency (`npm install`)
 2. Plan includes task to create `src/lib/sdk-context.tsx` from template
 3. Plan includes task to create `src/lib/sdk-services.tsx` adapter
-4. Plan includes task to upgrade `src/lib/frontier-services.tsx` with environment detection
-5. Plan includes task to upgrade `src/views/Layout.tsx` with iframe detection + SdkProvider
+4. Plan keeps `src/lib/frontier-services.tsx` as the SDK-free mock seam (NO task to add SDK imports/detection there)
+5. Plan includes task to swap in `src/views/Layout.tsx` from the template (iframe detection + `SdkProvider` + `FrontierServicesProvider` bridge so `useServices()` resolves)
 6. Plan includes task to add CORS origins to `vercel.json`
 7. Plan includes verification task (build, typecheck, full validation)
 

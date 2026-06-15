@@ -130,14 +130,16 @@ if (standaloneHtml) {
 }
 ```
 
-### I-03: SdkProvider wrapping children in Layout.tsx
+### I-03: SdkProvider + FrontierServicesProvider wrapping children in Layout.tsx
 
-When inside the Frontier app, the Layout must wrap its children (either `<Outlet />` or a single component) with `<SdkProvider>`.
+When inside the Frontier app, the Layout must wrap its children with `<SdkProvider>` AND bridge the SDK into `<FrontierServicesProvider>`. Feature code consumes `useServices()`, so without `FrontierServicesProvider` the app **crashes at runtime** ("useServices must be used within FrontierServicesProvider").
 
-**Pass condition:** The return statement for the "in Frontier" case contains:
+**Pass condition:** Layout's "in Frontier" return path contains both providers:
 ```tsx
 <SdkProvider>
-  <Outlet />  {/* or a single component */}
+  <SdkServicesBridge>   {/* useSdk() → createSdkServices(sdk) → FrontierServicesProvider */}
+    <Outlet />
+  </SdkServicesBridge>
 </SdkProvider>
 ```
 

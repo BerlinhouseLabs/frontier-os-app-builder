@@ -183,19 +183,23 @@ const wallet = services.wallet;
 **Create hooks with loading/error states:**
 ```typescript
 import { useState, useEffect } from 'react';
-import { useServices } from '../lib/frontier-services';
-import type { ReturnType } from '@frontiertower/frontier-sdk';
+import { useServices, type FrontierServices } from '../lib/frontier-services';
 
-export function useFeature() {
+// Derive feature data types from the FrontierServices seam — NEVER import the
+// SDK in feature code (it isn't installed in scaffold/feature phases and fails
+// verification rule M-03). `ReturnType` here is the TypeScript built-in.
+type Balance = Awaited<ReturnType<FrontierServices['wallet']['getBalance']>>;
+
+export function useBalance() {
   const services = useServices();
-  const [data, setData] = useState<ReturnType | null>(null);
+  const [data, setData] = useState<Balance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const result = await services.module.method();
+        const result = await services.wallet.getBalance();
         setData(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -272,7 +276,7 @@ Access modules via `services.<module>` from `useServices()`. Property names matc
 **TIER 2 — SDK INTEGRATION PHASE ONLY:**
 7. **SDK access:** `useSdk()` hook from `src/lib/sdk-context.tsx`, used only inside `sdk-services.tsx` and `Layout.tsx`.
 8. **Iframe detection:** `isInFrontierApp()` check in Layout.tsx. Standalone mode shows fallback banner.
-9. **SdkProvider wrapping:** App wrapped in SdkProvider when inside iframe. SDK initialized once via useRef, destroyed on unmount.
+9. **Provider wrapping:** In-frame, Layout wraps the app in `SdkProvider` AND bridges the SDK into `FrontierServicesProvider` (so `useServices()` resolves). SDK initialized once via useRef, destroyed on unmount.
 10. **Permissions:** Every SDK method used must have permission declared in manifest.json.
 11. **CORS:** vercel.json sets CORS for the production origin plus a CSP `frame-ancestors` listing the 3 Frontier OS origins (os.frontiertower.io, sandbox.os.frontiertower.io, localhost:5173) and security headers. Copy templates/app/vercel.json verbatim.
 12. **SDK imports:** Use `@frontiertower/frontier-sdk` for SDK classes. Exact import paths, not barrel imports.
@@ -282,7 +286,7 @@ Access modules via `services.<module>` from `useServices()`. Property names matc
 
 ### SDK Integration Phase Execution
 
-Follow the SDK Integration pattern from app-patterns.md "SDK Integration Pattern" section. The 6 steps are: add SDK dependency, create sdk-context.tsx, create sdk-services.tsx, upgrade frontier-services.tsx, upgrade Layout.tsx, add CORS origins. Use templates from templates/app/ for each file.
+Follow the SDK Integration pattern from app-patterns.md "SDK Integration Pattern" section. The steps are: add SDK dependency; create sdk-context.tsx; create sdk-services.tsx (wire the modules your app uses); swap in templates/app/layout.tsx (it bridges the SDK into FrontierServicesProvider so useServices() works in-frame); swap in the full vercel.json. Leave frontier-services.tsx unchanged — it stays the SDK-free mock seam; do NOT add SDK imports or detection to it. Use templates from templates/app/ for each file.
 
 </sdk_integration_execution>
 

@@ -177,16 +177,16 @@ The SDK Integration phase is ALWAYS the last phase. It is mechanical — no feat
 1. **Add SDK dependency** — `npm install @frontiertower/frontier-sdk@{{SDK_VERSION}}`. Add to package.json dependencies.
 2. **Create sdk-context.tsx** — Render from `templates/app/sdk-context.tsx` to `src/lib/sdk-context.tsx`. Standard SdkProvider + useSdk() hook, identical across all apps. NEVER modify after creation.
 3. **Create sdk-services.tsx** — Render from `templates/app/sdk-services.tsx` to `src/lib/sdk-services.tsx`. Adapter mapping FrontierServices interface to real SDK calls via useSdk().
-4. **Upgrade frontier-services.tsx** — Modify `src/lib/frontier-services.tsx` to detect environment: `window.self !== window.top`. If in iframe → import and use sdk-services adapter. If standalone → use existing mock services. Import `isInFrontierApp` from `@frontiertower/frontier-sdk/ui-utils`.
-5. **Upgrade Layout.tsx** — Follow standard Layout pattern from `templates/app/layout.tsx`: add `isInFrontierApp()` detection, `createStandaloneHTML()` fallback, `SdkProvider` wrapping of `<Outlet />`.
+4. **Leave frontier-services.tsx unchanged** — it stays the SDK-free mock seam. The iframe/standalone switch lives in Layout (step 5); do NOT add SDK imports or detection to `src/lib/frontier-services.tsx`.
+5. **Swap in Layout.tsx** — Copy `templates/app/layout.tsx`: `isInFrontierApp()` detection, `createStandaloneHTML()` fallback, and in-frame wrap `<Outlet />` in `SdkProvider` + bridge the SDK into `FrontierServicesProvider` (`createSdkServices(sdk)`) so `useServices()` resolves.
 6. **Swap in the full vercel.json** — Replace with `templates/app/vercel.json` (CORS + CSP `frame-ancestors` for the 3 origins + security headers).
 7. **Verify** — Build passes (`npm run build`), typecheck passes (`npx tsc --noEmit`), all verification rules pass including Tier 2.
 
 **Success criteria (fixed, not user-determined):**
 1. `src/lib/sdk-context.tsx` exists and exports `useSdk` + `SdkProvider`
 2. `src/lib/sdk-services.tsx` exists and maps all used service methods to real SDK calls
-3. `src/lib/frontier-services.tsx` detects iframe and routes to SDK adapter
-4. `src/views/Layout.tsx` has `isInFrontierApp()` detection and `SdkProvider` wrapping
+3. `src/views/Layout.tsx` bridges the SDK into `FrontierServicesProvider` (via `createSdkServices`) so `useServices()` resolves in-frame
+4. `src/views/Layout.tsx` has `isInFrontierApp()` detection, `SdkProvider`, AND `FrontierServicesProvider`
 5. `vercel.json` has CORS + CSP `frame-ancestors` (3 origins) + security headers
 6. `npm run build` succeeds
 7. `npx tsc --noEmit` passes

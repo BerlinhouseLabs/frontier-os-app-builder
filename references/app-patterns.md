@@ -69,7 +69,7 @@ These files are copied verbatim. They must not be modified per app.
 
 ### `src/lib/frontier-services.tsx`
 
-This file provides the `useServices()` hook and `FrontierServicesProvider`. It is identical across all apps. During standalone development it returns mock services; after SDK Integration it detects the environment and returns either mocks or real SDK-backed services.
+This file provides the `useServices()` hook and `FrontierServicesProvider`. It is identical across all apps and stays **SDK-free** (imports only React) — it is the mock seam. During standalone development `FrontierServicesProvider` returns mock services; after SDK Integration the **Layout** passes it real SDK-backed services in-frame (mocks standalone), so feature code never changes.
 
 ### `src/lib/sdk-context.tsx` — identical across all apps, created during SDK Integration phase (not at scaffold time)
 
@@ -318,9 +318,14 @@ export const Layout = () => {
     );
   }
 
+  // In-frame: SdkProvider provides the SDK; SdkServicesBridge wires it into
+  // FrontierServicesProvider so feature code's useServices() works unchanged.
+  // (SdkServicesBridge helper — see templates/app/layout.tsx.)
   return (
     <SdkProvider>
-      <Outlet />
+      <SdkServicesBridge>
+        <Outlet />
+      </SdkServicesBridge>
     </SdkProvider>
   );
 };
@@ -347,7 +352,7 @@ No iframe detection, no loading state, no standalone fallback. The app just rend
 
 #### SDK-Aware Layout (after SDK Integration phase)
 
-The existing Layout pattern with `isInFrontierApp()`, `createStandaloneHTML()`, and `SdkProvider` wrapping is applied during the SDK Integration phase. See the current Layout Pattern above.
+The Layout pattern with `isInFrontierApp()`, `createStandaloneHTML()`, `SdkProvider`, AND the `FrontierServicesProvider` bridge (so `useServices()` works against the real SDK) is applied during the SDK Integration phase. See the SDK-Aware Layout Pattern above and `templates/app/layout.tsx`.
 
 ---
 
@@ -582,8 +587,8 @@ The final phase of every app wires the real Frontier SDK in. This is a mechanica
 1. **Add SDK dependency**: `npm install @frontiertower/frontier-sdk`
 2. **Create `src/lib/sdk-context.tsx`**: Standard SdkProvider + useSdk hook (from template)
 3. **Create `src/lib/sdk-services.tsx`**: Adapter mapping FrontierServices interface to real SDK calls
-4. **Upgrade `src/lib/frontier-services.tsx`**: Add environment detection — iframe uses SDK adapter, standalone uses mocks
-5. **Upgrade `src/views/Layout.tsx`**: Add `isInFrontierApp()` detection, standalone fallback, `SdkProvider` wrapping
+4. **Leave `src/lib/frontier-services.tsx` unchanged**: it stays the SDK-free mock seam. The iframe/standalone switch happens in Layout (step 5) — do NOT add SDK imports or detection here.
+5. **Swap in `src/views/Layout.tsx`** (from `templates/app/layout.tsx`): `isInFrontierApp()` detection + standalone fallback; in-frame it wraps the app in `SdkProvider` AND bridges the SDK into `FrontierServicesProvider` (via `createSdkServices(sdk)`) so `useServices()` resolves against the real SDK
 6. **Swap in the full `vercel.json`**: CORS for the production origin + `Content-Security-Policy: frame-ancestors` listing the 3 live origins (`os.frontiertower.io`, `sandbox.os.frontiertower.io`, `localhost:5173`) + security headers
 
 After SDK Integration, the app works in both modes:
