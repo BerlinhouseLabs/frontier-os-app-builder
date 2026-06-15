@@ -420,7 +420,7 @@ function cmdValidateStructure(cwd, flags) {
   // Determine verification tier from manifest sdkPhase
   const manifest = loadManifest(cwd);
   const sdkPhase = manifest && manifest.sdkPhase != null ? manifest.sdkPhase : null;
-  const currentPhase = flags.phase ? parseInt(flags.phase, 10) : null;
+  const currentPhase = flags.phase != null && Number.isInteger(+flags.phase) ? +flags.phase : null;
   // Fallback to STATE.md phase when --phase not passed, so the Tier-2 gate works even if a caller forgets the flag
   const fallbackPhase = flags.phase == null ? (loadState(cwd)?.frontmatter?.phase ?? null) : null;
   const effectivePhase = currentPhase ?? fallbackPhase;
@@ -548,7 +548,7 @@ function cmdValidatePermissions(cwd, flags) {
 
   // Determine tier
   const sdkPhase = manifest.sdkPhase != null ? manifest.sdkPhase : null;
-  const currentPhase = flags.phase ? parseInt(flags.phase, 10) : null;
+  const currentPhase = flags.phase != null && Number.isInteger(+flags.phase) ? +flags.phase : null;
   // Fallback to STATE.md phase when --phase not passed, so the Tier-2 gate works even if a caller forgets the flag
   const fallbackPhase = flags.phase == null ? (loadState(cwd)?.frontmatter?.phase ?? null) : null;
   const effectivePhase = currentPhase ?? fallbackPhase;
