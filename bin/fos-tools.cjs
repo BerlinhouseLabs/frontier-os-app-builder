@@ -10,7 +10,7 @@ const { execSync } = require('child_process');
 // Usage: node fos-tools.cjs <command> [args] [--raw] [--pick <field>]
 // ─────────────────────────────────────────────
 
-const VERSION = '1.0.0';
+const VERSION = '1.2.0';
 
 // ── Helpers ──────────────────────────────────
 

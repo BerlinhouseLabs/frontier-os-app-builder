@@ -274,7 +274,7 @@ Access modules via `services.<module>` from `useServices()`. Property names matc
 8. **Iframe detection:** `isInFrontierApp()` check in Layout.tsx. Standalone mode shows fallback banner.
 9. **SdkProvider wrapping:** App wrapped in SdkProvider when inside iframe. SDK initialized once via useRef, destroyed on unmount.
 10. **Permissions:** Every SDK method used must have permission declared in manifest.json.
-11. **CORS:** vercel.json must include the 3 Frontier OS origins (os.frontiertower.io, sandbox.os.frontiertower.io, localhost:5173).
+11. **CORS:** vercel.json sets CORS for the production origin plus a CSP `frame-ancestors` listing the 3 Frontier OS origins (os.frontiertower.io, sandbox.os.frontiertower.io, localhost:5173) and security headers. Copy templates/app/vercel.json verbatim.
 12. **SDK imports:** Use `@frontiertower/frontier-sdk` for SDK classes. Exact import paths, not barrel imports.
 </frontier_os_rules>
 

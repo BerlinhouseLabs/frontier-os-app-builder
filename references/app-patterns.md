@@ -152,7 +152,7 @@ export default {
 
 ### `vercel.json`
 
-See [deployment.md](deployment.md) for the full file. All apps share the same CORS configuration covering the 3 live Frontier OS origins (production `os.frontiertower.io`, sandbox `sandbox.os.frontiertower.io`, and `localhost:5173`).
+See [deployment.md](deployment.md) for the full file. All apps share the same `vercel.json`: CORS for the production origin plus a `Content-Security-Policy: frame-ancestors` listing the 3 live Frontier OS origins (production `os.frontiertower.io`, sandbox `sandbox.os.frontiertower.io`, and `localhost:5173`) and the standard security headers.
 
 ---
 
@@ -175,7 +175,7 @@ Fixed fields (do not change):
 - `"private": true`
 - `"type": "module"`
 - `scripts` block (see Package Scripts below)
-- Core dependencies: `@frontiertower/frontier-sdk`, `react`, `react-dom`, `react-router-dom`
+- Core dependencies: `@frontiertower/frontier-sdk`, `react`, `react-dom`, `react-router-dom`, `viem` (`^2.44.0` — for on-chain apps that build calldata for `executeCall`/`executeBatchCall`; safe to drop for pure-UI apps)
 - Core devDependencies: `@tailwindcss/postcss`, `@types/react`, `@types/react-dom`, `@vitejs/plugin-react`, `postcss`, `tailwindcss`, `typescript`, `vite`
 - Test devDependencies (when tests exist): `@testing-library/jest-dom`, `@testing-library/react`, `@testing-library/user-event`, `@vitest/coverage-v8`, `jsdom`, `vitest`
 
@@ -584,7 +584,7 @@ The final phase of every app wires the real Frontier SDK in. This is a mechanica
 3. **Create `src/lib/sdk-services.tsx`**: Adapter mapping FrontierServices interface to real SDK calls
 4. **Upgrade `src/lib/frontier-services.tsx`**: Add environment detection — iframe uses SDK adapter, standalone uses mocks
 5. **Upgrade `src/views/Layout.tsx`**: Add `isInFrontierApp()` detection, standalone fallback, `SdkProvider` wrapping
-6. **Add CORS origins to `vercel.json`**: The 3 live Frontier OS origins (`os.frontiertower.io`, `sandbox.os.frontiertower.io`, `localhost:5173`)
+6. **Swap in the full `vercel.json`**: CORS for the production origin + `Content-Security-Policy: frame-ancestors` listing the 3 live origins (`os.frontiertower.io`, `sandbox.os.frontiertower.io`, `localhost:5173`) + security headers
 
 After SDK Integration, the app works in both modes:
 - **Standalone** (browser): Uses mock services, shows development data
