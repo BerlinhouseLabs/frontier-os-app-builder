@@ -10,7 +10,7 @@ const path = require('path');
 // and templates into ~/.claude/
 // ─────────────────────────────────────────────
 
-const VERSION = '1.0.0';
+const VERSION = '1.2.0';
 const PRODUCT = 'frontier-os-app-builder';
 
 // Source: this repo

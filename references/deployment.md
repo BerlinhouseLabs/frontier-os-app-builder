@@ -18,13 +18,6 @@ All Frontier OS apps deploy to Vercel. The `vercel.json` file is identical acros
   "headers": [
     {
       "source": "/(.*)",
-      "has": [
-        {
-          "type": "header",
-          "key": "Origin",
-          "value": "https://os.frontiertower.io"
-        }
-      ],
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
@@ -37,54 +30,22 @@ All Frontier OS apps deploy to Vercel. The `vercel.json` file is identical acros
         {
           "key": "Access-Control-Allow-Headers",
           "value": "Content-Type"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "header",
-          "key": "Origin",
-          "value": "https://sandbox.os.frontiertower.io"
-        }
-      ],
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://sandbox.os.frontiertower.io"
         },
         {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, OPTIONS"
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors https://os.frontiertower.io https://sandbox.os.frontiertower.io http://localhost:5173;"
         },
         {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "header",
-          "key": "Origin",
-          "value": "http://localhost:5173"
-        }
-      ],
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "http://localhost:5173"
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
         },
         {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, OPTIONS"
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
         },
         {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type"
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
     }
@@ -92,15 +53,15 @@ All Frontier OS apps deploy to Vercel. The `vercel.json` file is identical acros
 }
 ```
 
-### Why Separate Blocks (one per origin)
+### One Header Block + CSP `frame-ancestors`
 
-Vercel does not support multiple values in a single `Access-Control-Allow-Origin` header. Each of the 3 allowed origins requires its own conditional header block using the `has` matcher. The `has` condition checks the incoming `Origin` request header and only attaches the CORS response headers when the origin matches.
+A single unconditional header block applies CORS for the production origin plus the security headers to every response. Embedding by all three Frontier origins is granted by the `Content-Security-Policy: frame-ancestors` directive (which lists all three) — `frame-ancestors` is what actually governs iframe embedding, not per-origin CORS reflection. This replaces the older pattern of one `has`-matched CORS block per origin.
 
 ---
 
 ## Allowed Origins
 
-The Frontier Wallet PWA runs at these 3 origins. Apps must allow CORS from all of them:
+The Frontier Wallet PWA runs at these 3 origins. Apps must allow all of them to embed the app via the CSP `frame-ancestors` directive:
 
 | Origin                                    | Environment  | Description                                                    |
 | ----------------------------------------- | ------------ | -------------------------------------------------------------- |
@@ -118,16 +79,16 @@ The `isInFrontierApp()` function checks `window.self !== window.top` to detect i
 
 ## Security Headers
 
-In addition to CORS, all deployment targets should include:
+The `vercel.json` above already ships these alongside CORS — every app should keep them:
 
-| Header                       | Recommended Value                                  | Purpose                                     |
+| Header                       | Value (shipped in vercel.json)                     | Purpose                                     |
 | ---------------------------- | -------------------------------------------------- | ------------------------------------------- |
-| `Content-Security-Policy`    | Include `frame-ancestors https://os.frontiertower.io https://sandbox.os.frontiertower.io http://localhost:5173` (the 3 live origins) | Prevents embedding by unauthorized sites   |
+| `Content-Security-Policy`    | `frame-ancestors https://os.frontiertower.io https://sandbox.os.frontiertower.io http://localhost:5173;` (the 3 live origins) | Restricts who may embed the app             |
 | `X-Content-Type-Options`     | `nosniff`                                          | Prevents MIME-type sniffing                 |
 | `Referrer-Policy`            | `strict-origin-when-cross-origin`                  | Controls referrer information leakage       |
-| `Permissions-Policy`         | Disable unnecessary browser APIs                   | Reduces attack surface                      |
+| `Permissions-Policy`         | `camera=(), microphone=(), geolocation=()`         | Disables unused browser APIs                |
 
-The `frame-ancestors` CSP directive is critical because apps load inside the PWA's iframe. Without it, the browser may block the embed.
+The `frame-ancestors` CSP directive is critical because apps load inside the PWA's iframe. Without it, the browser may block the embed. The CSP is intentionally limited to `frame-ancestors` so it never blocks app resources (e.g. the Google Fonts stylesheet the template loads); apps that self-host all assets may tighten it further.
 
 ---
 

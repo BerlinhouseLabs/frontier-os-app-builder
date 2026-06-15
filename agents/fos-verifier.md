@@ -174,10 +174,14 @@ If any file outside `sdk-context.tsx` instantiates `new FrontierSDK()` directly,
 > **Tier 2 — SDK Integration phase only.** CORS origins are added during SDK Integration.
 
 ```bash
-# Check all 3 origins present
+# Check all 3 origins present (in the CSP frame-ancestors directive)
 for origin in "os.frontiertower.io" "sandbox.os.frontiertower.io" "localhost:5173"; do
   grep -q "$origin" vercel.json && echo "PASS: $origin" || echo "FAIL: $origin missing from vercel.json"
 done
+
+# Check CSP frame-ancestors + security headers
+grep -q "frame-ancestors" vercel.json && echo "PASS: CSP frame-ancestors" || echo "FAIL: CSP frame-ancestors missing"
+grep -q "X-Content-Type-Options" vercel.json && echo "PASS: security headers" || echo "FAIL: security headers missing"
 
 # Check SPA rewrite
 grep -q '"/(.*)"' vercel.json && echo "PASS: SPA rewrite" || echo "FAIL: SPA rewrite missing"
