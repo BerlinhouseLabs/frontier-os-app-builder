@@ -5,7 +5,7 @@
   "author": "BerlinhouseLabs",
   "license": "MIT",
   "bin": {
-    "frontier-os-app-builder": "./bin/install.js"
+    "frontier-os-app-builder": "bin/install.js"
   },
   "files": [
     "bin/",
@@ -31,6 +31,6 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/BerlinhouseLabs/frontier-os-app-builder.git"
+    "url": "git+https://github.com/BerlinhouseLabs/frontier-os-app-builder.git"
   }
 }
