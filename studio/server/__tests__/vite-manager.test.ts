@@ -28,6 +28,17 @@ function fakeChild(): ChildProcess {
   } as unknown as ChildProcess;
 }
 
+// Like fakeChild, but records the event handlers ViteManager attaches so a test
+// can fire 'exit'/'error' and assert the manager's reaction.
+function fakeChildCapturing(handlers: Record<string, (...args: unknown[]) => void>): ChildProcess {
+  return {
+    stdout: { on: vi.fn() },
+    stderr: { on: vi.fn() },
+    on: vi.fn((event: string, cb: (...args: unknown[]) => void) => { handlers[event] = cb; }),
+    kill: vi.fn(),
+  } as unknown as ChildProcess;
+}
+
 function createManager(port = 5173) {
   return new ViteManager({
     appDir: '/test/app',
@@ -142,6 +153,40 @@ describe('ViteManager', () => {
 
       expect(getStartedByUs(manager)).toBe(false);
       expect(manager.status).toBe('stopped');
+    });
+
+    it('clears startedByUs when Vite exits on its own, so a foreign port is not adopted', async () => {
+      mockExistsSync.mockReturnValue(true);
+      const handlers: Record<string, (...args: unknown[]) => void> = {};
+      mockSpawn.mockReturnValue(fakeChildCapturing(handlers));
+      const manager = createManager(5173);
+      stubProbe(manager, true); // waitForPort resolves to running
+
+      await manager.start();
+      expect(getStartedByUs(manager)).toBe(true); // Studio owns this Vite
+
+      // Vite dies on its own (crash) — NOT via stop(). Ownership must drop, or a
+      // later start() could adopt an attacker that grabbed the freed port.
+      handlers.exit?.(1);
+
+      expect(getStartedByUs(manager)).toBe(false);
+      await manager.stop();
+    });
+
+    it('clears startedByUs when the Vite process errors', async () => {
+      mockExistsSync.mockReturnValue(true);
+      const handlers: Record<string, (...args: unknown[]) => void> = {};
+      mockSpawn.mockReturnValue(fakeChildCapturing(handlers));
+      const manager = createManager(5173);
+      stubProbe(manager, true);
+
+      await manager.start();
+      expect(getStartedByUs(manager)).toBe(true);
+
+      handlers.error?.(new Error('boom'));
+
+      expect(getStartedByUs(manager)).toBe(false);
+      await manager.stop();
     });
   });
 

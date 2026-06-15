@@ -132,6 +132,9 @@ export class ViteManager {
 
     this.process.on('exit', (code) => {
       this.process = null;
+      // Our Vite is gone — drop ownership so a foreign process that grabs this
+      // port can't be adopted by a later start() (see the startedByUs gate above).
+      this.startedByUs = false;
       if (code !== 0 && code !== null) {
         const stderr = this.stderrBuffer.join('\n');
         let errorMsg = `Dev server exited with code ${code}`;
@@ -149,6 +152,9 @@ export class ViteManager {
 
     this.process.on('error', (err) => {
       this.process = null;
+      // Same ownership reset as the exit handler: a crashed Vite must not leave
+      // startedByUs=true, or the next start() could adopt an attacker's port.
+      this.startedByUs = false;
       if (err.message.includes('ENOENT')) {
         this.setStatus('error', 'npm is not installed');
       } else {
