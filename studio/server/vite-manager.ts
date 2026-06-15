@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createConnection } from 'node:net';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 export type ViteStatus = 'running' | 'starting' | 'stopped' | 'error';
@@ -14,6 +14,7 @@ export interface ViteManagerOptions {
 
 export class ViteManager {
   private process: ChildProcess | null = null;
+  private startedByUs = false;
   private healthTimer: ReturnType<typeof setInterval> | null = null;
   private appDir: string;
   private port: number;
@@ -61,26 +62,6 @@ export class ViteManager {
     return { ok: true };
   }
 
-  // Read the actual port from vite.config.ts since manifest.json might be wrong
-  private detectPort(): number {
-    try {
-      const configPath = join(this.appDir, 'vite.config.ts');
-      if (existsSync(configPath)) {
-        const content = readFileSync(configPath, 'utf-8');
-        const match = content.match(/port\s*:\s*(\d+)/);
-        if (match) {
-          const detected = parseInt(match[1], 10);
-          if (detected > 0 && detected <= 65535) {
-            return detected;
-          }
-        }
-      }
-    } catch {
-      // fall through to configured port
-    }
-    return this.port;
-  }
-
   async start(): Promise<void> {
     const check = this.canStart();
     if (!check.ok) {
@@ -88,12 +69,20 @@ export class ViteManager {
       return;
     }
 
-    const alive = await this.probePort();
-    if (alive) {
-      this._lastError = null;
-      this.setStatus('running');
-      this.startHealthCheck();
-      return;
+    // Only adopt an already-listening port if Studio itself started Vite on it
+    // (e.g. a redundant start() while our own dev server is already up). A
+    // FOREIGN process holding the configured port must NOT be adopted —
+    // otherwise the preview iframe would render someone else's app. When we did
+    // not start it, spawn our own Vite anyway: it auto-increments off the
+    // occupied port and we parse the real port from its stdout (onPortDetected).
+    if (this.startedByUs) {
+      const alive = await this.probePort();
+      if (alive) {
+        this._lastError = null;
+        this.setStatus('running');
+        this.startHealthCheck();
+        return;
+      }
     }
 
     this.setStatus('starting');
@@ -105,6 +94,8 @@ export class ViteManager {
       detached: false,
       env: { ...process.env, FORCE_COLOR: '0' },
     });
+    // Studio now owns this Vite instance; a later start() may adopt its port.
+    this.startedByUs = true;
 
     // Capture stderr for error display
     this.process.stderr?.on('data', (chunk: Buffer) => {
@@ -141,12 +132,13 @@ export class ViteManager {
 
     this.process.on('exit', (code) => {
       this.process = null;
+      // Our Vite is gone — drop ownership so a foreign process that grabs this
+      // port can't be adopted by a later start() (see the startedByUs gate above).
+      this.startedByUs = false;
       if (code !== 0 && code !== null) {
         const stderr = this.stderrBuffer.join('\n');
         let errorMsg = `Dev server exited with code ${code}`;
-        if (stderr.includes('missing script')) {
-          errorMsg = "No 'dev' script in package.json";
-        } else if (stderr.includes('ENOENT') || stderr.includes('not found')) {
+        if (stderr.includes('ENOENT') || stderr.includes('not found')) {
           errorMsg = 'node_modules not installed — run npm install first';
         } else if (stderr.length > 0) {
           // Show last 5 lines of output
@@ -160,6 +152,9 @@ export class ViteManager {
 
     this.process.on('error', (err) => {
       this.process = null;
+      // Same ownership reset as the exit handler: a crashed Vite must not leave
+      // startedByUs=true, or the next start() could adopt an attacker's port.
+      this.startedByUs = false;
       if (err.message.includes('ENOENT')) {
         this.setStatus('error', 'npm is not installed');
       } else {
@@ -235,6 +230,7 @@ export class ViteManager {
       this.process.kill('SIGTERM');
       this.process = null;
     }
+    this.startedByUs = false;
     this.setStatus('stopped');
   }
 

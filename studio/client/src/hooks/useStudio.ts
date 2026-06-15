@@ -3,6 +3,13 @@ import type { PhaseInfo, ParseError, PlanSummary, PhaseDetail, ProjectState, Act
 
 export type { PhaseInfo, ParseError, PlanSummary, PhaseDetail, ProjectState, ActivityEvent, ViteStatus, AppSummary };
 
+declare global {
+  interface Window {
+    /** Per-session Studio auth token injected into index.html by the server. */
+    __STUDIO_TOKEN__?: string;
+  }
+}
+
 export interface StudioState {
   state: ProjectState | null;
   viteStatus: ViteStatus;
@@ -58,7 +65,8 @@ export function useStudio(): StudioState {
 
   const connect = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}`);
+    const token = window.__STUDIO_TOKEN__ ?? '';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/?token=${token}`);
     wsRef.current = ws;
 
     ws.onopen = () => {

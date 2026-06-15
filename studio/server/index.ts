@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile, writeFile } from 'node:fs/promises';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { parseProjectState, type ProjectState, type ParseError } from './parser.js';
 import { StateWatcher } from './watcher.js';
@@ -29,11 +30,44 @@ export interface StudioOptions {
   /** Optional: auto-select this app on startup. If omitted, the picker is shown. */
   initialAppDir?: string | null;
   port: number;
+  /**
+   * Host/interface to bind. Defaults to '127.0.0.1' (loopback only) for safety:
+   * Studio spawns `claude --dangerously-skip-permissions`, so exposing it on a
+   * shared network is a remote-code-execution risk. Set a LAN IP / '0.0.0.0'
+   * only through an explicit opt-in (e.g. `studio --host`).
+   */
+  host?: string;
 }
 
 export async function startStudio(opts: StudioOptions): Promise<{ close: () => Promise<void> }> {
   const { workspaceRoot, port } = opts;
+  const host = opts.host ?? '127.0.0.1';
   const clientDir = join(__dirname, '..', 'client');
+
+  // Per-session token (defense-in-depth alongside the loopback bind + Origin
+  // allowlist). Injected into the served index.html and required on WS upgrade.
+  const sessionToken = randomBytes(16).toString('hex');
+
+  // Origins permitted to open a WebSocket. Loopback is always allowed; a custom
+  // bind host (the opt-in --host) is added so power users aren't locked out.
+  const allowedOrigins = new Set<string>([
+    `http://localhost:${port}`,
+    `http://127.0.0.1:${port}`,
+  ]);
+  if (host !== '127.0.0.1' && host !== 'localhost') {
+    allowedOrigins.add(`http://${host}:${port}`);
+  }
+
+  function hasValidToken(provided: string): boolean {
+    const expected = Buffer.from(sessionToken);
+    const actual = Buffer.from(provided);
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  }
+
+  function injectToken(html: string): string {
+    const tag = `<script>window.__STUDIO_TOKEN__=${JSON.stringify(sessionToken)}</script>`;
+    return html.includes('</head>') ? html.replace('</head>', `${tag}</head>`) : tag + html;
+  }
 
   // --- Current-app state (swappable) ---
   let appDir: string | null = null;
@@ -243,18 +277,6 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const url = req.url || '/';
 
-    if (url === '/api/state') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        appDir,
-        state: currentState,
-        viteStatus: currentViteStatus,
-        viteError: currentViteError,
-        errors: currentErrors,
-      }));
-      return;
-    }
-
     const filePath = url === '/' ? '/index.html' : url;
     const fullPath = join(clientDir, filePath);
 
@@ -267,13 +289,18 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
     try {
       const content = await readFile(fullPath);
       const ext = extname(filePath);
-      res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
-      res.end(content);
+      if (ext === '.html') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(injectToken(content.toString('utf-8')));
+      } else {
+        res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
+        res.end(content);
+      }
     } catch {
       try {
         const index = await readFile(join(clientDir, 'index.html'));
         res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(index);
+        res.end(injectToken(index.toString('utf-8')));
       } catch {
         res.writeHead(404);
         res.end('Not found');
@@ -282,7 +309,31 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
   });
 
   // --- WebSocket server ---
-  const wss = new WebSocketServer({ server, maxPayload: 1024 * 1024 });
+  const wss = new WebSocketServer({
+    server,
+    maxPayload: 1024 * 1024,
+    verifyClient: (info, cb) => {
+      // Reject cross-origin WebSocket handshakes. A missing Origin (non-browser
+      // clients) is allowed because the loopback bind already constrains those.
+      const origin = info.origin;
+      if (origin && !allowedOrigins.has(origin)) {
+        cb(false, 403, 'Forbidden origin');
+        return;
+      }
+      // Require the per-session token injected into the served index.html.
+      let provided = '';
+      try {
+        provided = new URL(info.req.url || '/', 'http://localhost').searchParams.get('token') || '';
+      } catch {
+        provided = '';
+      }
+      if (!hasValidToken(provided)) {
+        cb(false, 401, 'Invalid token');
+        return;
+      }
+      cb(true);
+    },
+  });
 
   wss.on('connection', (ws) => {
     clients.add(ws);
@@ -362,7 +413,7 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
             },
           });
           try {
-            const info = pty.start();
+            const info = await pty.start();
             ws.send(JSON.stringify({ type: 'pty-started', command: info.command, args: info.args }));
           } catch (err) {
             ws.send(JSON.stringify({
@@ -405,8 +456,9 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
   }
 
   return new Promise((resolve) => {
-    server.listen(port, () => {
-      console.log(`\n  Frontier Studio running at http://localhost:${port}\n`);
+    server.listen(port, host, () => {
+      const displayHost = host === '127.0.0.1' ? 'localhost' : host;
+      console.log(`\n  Frontier Studio running at http://${displayHost}:${port}\n`);
       console.log(`  Workspace root: ${workspaceRoot}`);
       if (appDir) {
         console.log(`  Initial app:    ${appDir}\n`);
