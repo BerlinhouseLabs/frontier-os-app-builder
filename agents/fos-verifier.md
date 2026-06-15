@@ -146,13 +146,14 @@ grep -q "createStandaloneHTML" src/views/Layout.tsx && echo "PASS: I-02" || echo
 
 Verify the pattern: when `isInFrontierApp()` returns false, `createStandaloneHTML()` is called and rendered via `dangerouslySetInnerHTML`.
 
-### I-03: SdkProvider wrapping children
+### I-03: SdkProvider + FrontierServicesProvider wrapping children
 
 ```bash
-grep -q "SdkProvider" src/views/Layout.tsx && echo "PASS: I-03" || echo "FAIL: I-03"
+grep -q "SdkProvider" src/views/Layout.tsx && echo "PASS: I-03 SdkProvider" || echo "FAIL: I-03 SdkProvider"
+grep -q "FrontierServicesProvider" src/views/Layout.tsx && echo "PASS: I-03 FrontierServicesProvider" || echo "FAIL: I-03 FrontierServicesProvider (useServices() will crash at runtime)"
 ```
 
-Verify `<SdkProvider>` wraps `<Outlet />` or the app's child component in the "in Frontier" code path.
+Verify the "in Frontier" path wraps children in `<SdkProvider>` AND bridges the SDK into `<FrontierServicesProvider>` (feature code uses `useServices()`, not `useSdk()`).
 
 ### I-04: useSdk() hook available and used
 

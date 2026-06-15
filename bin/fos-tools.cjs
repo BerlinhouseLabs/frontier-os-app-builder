@@ -491,6 +491,9 @@ function cmdValidateStructure(cwd, flags) {
       if (!layout.includes('SdkProvider')) {
         issues.push('Layout.tsx missing SdkProvider wrapping');
       }
+      if (!layout.includes('FrontierServicesProvider')) {
+        issues.push('Layout.tsx missing FrontierServicesProvider bridge (useServices() will crash at runtime)');
+      }
     }
   }
 
