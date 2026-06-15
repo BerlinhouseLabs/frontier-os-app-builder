@@ -27,4 +27,4 @@ Maps app descriptions to Frontier SDK modules. The CLI (`fos-tools.cjs infer-mod
 
 ## After Inference
 
-Once modules are confirmed, read only the relevant `references/sdk/<module>.md` files for detailed method signatures, types, and permissions. Always include `references/sdk/init.md` and `references/sdk/types.md` as shared context.
+Once modules are confirmed, read only the relevant `references/sdk/<module>.md` files for detailed method signatures, types, and permissions. Always include `references/sdk/init.md` and `references/sdk/types.md` as shared context. For any app that reads, displays, transfers, or swaps FND amounts, also read `references/sdk/token-amount.md` — FND amounts are `bigint` base units bridged to/from display strings via `formatAmount()`/`parseAmount()`.

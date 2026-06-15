@@ -57,54 +57,6 @@
         {
           "type": "header",
           "key": "Origin",
-          "value": "https://alpha.os.frontiertower.io"
-        }
-      ],
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://alpha.os.frontiertower.io"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "header",
-          "key": "Origin",
-          "value": "https://beta.os.frontiertower.io"
-        }
-      ],
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://beta.os.frontiertower.io"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "header",
-          "key": "Origin",
           "value": "http://localhost:5173"
         }
       ],

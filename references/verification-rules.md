@@ -156,17 +156,15 @@ When inside the Frontier app, the Layout must wrap its children (either `<Outlet
 
 These verify configuration files have the correct content.
 
-### C-01: vercel.json has all 5 CORS origin blocks
+### C-01: vercel.json has the 3 CORS origin blocks
 
 > **Tier 2 — SDK Integration phase only.**
 
-The `vercel.json` file must contain exactly 5 header blocks, one for each allowed origin:
+The `vercel.json` file must contain exactly 3 header blocks, one for each allowed origin:
 
 1. `https://os.frontiertower.io`
 2. `https://sandbox.os.frontiertower.io`
-3. `https://alpha.os.frontiertower.io`
-4. `https://beta.os.frontiertower.io`
-5. `http://localhost:5173`
+3. `http://localhost:5173`
 
 Each block must include:
 - `Access-Control-Allow-Origin` matching the origin
@@ -178,7 +176,7 @@ It must also include the SPA rewrite:
 { "source": "/(.*)", "destination": "/index.html" }
 ```
 
-**Pass condition:** All 5 origin blocks are present with correct headers. The rewrite rule exists.
+**Pass condition:** All 3 origin blocks are present with correct headers. The rewrite rule exists.
 
 ### C-02: tsconfig.json has strict mode and vitest types
 
@@ -445,7 +443,7 @@ Source files under `src/hooks/`, `src/views/`, and `src/components/` must NOT im
 | I-02  | SDK           | createStandaloneHTML() fallback in Layout.tsx        | Tier 2 | Error    |
 | I-03  | SDK           | SdkProvider wrapping children in Layout.tsx          | Tier 2 | Error    |
 | I-04  | SDK           | useSdk() hook available and used                    | Tier 2 | Error    |
-| C-01  | Configuration | vercel.json has all 5 CORS origin blocks            | Tier 2 | Error    |
+| C-01  | Configuration | vercel.json has the 3 CORS origin blocks            | Tier 2 | Error    |
 | C-02  | Configuration | tsconfig.json has strict mode and vitest types      | Tier 1 | Error    |
 | C-03  | Configuration | postcss.config.js imports @tailwindcss/postcss      | Tier 1 | Error    |
 | C-04  | Configuration | package.json has correct scripts                    | Tier 1 | Error    |

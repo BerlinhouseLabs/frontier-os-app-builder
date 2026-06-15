@@ -246,7 +246,7 @@ Use semantic Tailwind classes from the app's index.css @theme block (bg-backgrou
 ### Type Safety
 
 - Always use the SDK types from `@frontiertower/frontier-sdk`
-- Never invent types — use `WalletBalance`, `WalletBalanceFormatted`, `UserOperationReceipt`, `SmartAccount`, etc.
+- Never invent types — use `WalletBalance`, `UserOperationReceipt`, `SmartAccount`, etc.
 - If a type is not exported by the SDK, define a local interface that matches the SDK's return shape
 - Always use `strict: true` TypeScript
 
@@ -274,7 +274,7 @@ Access modules via `services.<module>` from `useServices()`. Property names matc
 8. **Iframe detection:** `isInFrontierApp()` check in Layout.tsx. Standalone mode shows fallback banner.
 9. **SdkProvider wrapping:** App wrapped in SdkProvider when inside iframe. SDK initialized once via useRef, destroyed on unmount.
 10. **Permissions:** Every SDK method used must have permission declared in manifest.json.
-11. **CORS:** vercel.json must include all 5 Frontier OS origins (os.frontiertower.io, sandbox.os.frontiertower.io, alpha.os.frontiertower.io, beta.os.frontiertower.io, localhost:5173).
+11. **CORS:** vercel.json must include the 3 Frontier OS origins (os.frontiertower.io, sandbox.os.frontiertower.io, localhost:5173).
 12. **SDK imports:** Use `@frontiertower/frontier-sdk` for SDK classes. Exact import paths, not barrel imports.
 </frontier_os_rules>
 
@@ -448,7 +448,7 @@ tasks_completed: N/N
 
 # Phase [X] Plan [Y]: [Name] Summary
 
-[One-liner must be substantive: "Balance display with useBalance hook calling getBalanceFormatted(), card-based UI with loading/error states" NOT "Balance feature implemented"]
+[One-liner must be substantive: "Balance display with useBalance hook calling getBalance() and formatting via formatAmount(), card-based UI with loading/error states" NOT "Balance feature implemented"]
 
 ## Tasks Completed
 
@@ -464,7 +464,7 @@ tasks_completed: N/N
 
 | Method | Module | Permission | Files |
 |--------|--------|------------|-------|
-| wallet.getBalanceFormatted() | Wallet | wallet:getBalanceFormatted | src/hooks/useBalance.ts |
+| wallet.getBalance() | Wallet | wallet:getBalance | src/hooks/useBalance.ts |
 
 ## Deviations from Plan
 

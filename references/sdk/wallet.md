@@ -11,12 +11,7 @@ Access via `sdk.getWallet()`. All methods use the current chain from the chain m
 ```typescript
 getBalance(): Promise<WalletBalance>
 ```
-Returns raw balance breakdown (bigint values). Permission: `wallet:getBalance`
-
-```typescript
-getBalanceFormatted(): Promise<WalletBalanceFormatted>
-```
-Returns display-formatted balance strings (e.g. `'$10.50'`). Permission: `wallet:getBalanceFormatted`
+Returns raw balance breakdown (bigint values). To display, format each bigint field with `formatAmount()` from `@frontiertower/frontier-sdk`. Permission: `wallet:getBalance`
 
 ```typescript
 getAddress(): Promise<string>
@@ -76,25 +71,25 @@ Execute multiple calls atomically in a single transaction. Permission: `wallet:e
 ```typescript
 transferFrontierDollar(
   to: string,
-  amount: string,
+  amount: bigint,
   overrides?: GasOverrides
 ): Promise<UserOperationReceipt>
 ```
-Transfer FND (Frontier Network Dollar). Amount is human-readable string (e.g. `'10.5'`). Permission: `wallet:transferFrontierDollar`
+Transfer FND (Frontier Network Dollar). Amount in base units — build with `parseAmount('10.5')` from `@frontiertower/frontier-sdk`. Permission: `wallet:transferFrontierDollar`
 
 ```typescript
 transferInternalFrontierDollar(
   to: string,
-  amount: string,
+  amount: bigint,
   overrides?: GasOverrides
 ): Promise<UserOperationReceipt>
 ```
-Transfer iFND (Internal Frontier Network Dollar). Amount is human-readable string. Permission: `wallet:transferInternalFrontierDollar`
+Transfer iFND (Internal Frontier Network Dollar). Amount in base units — build with `parseAmount('10.5')` from `@frontiertower/frontier-sdk`. Permission: `wallet:transferInternalFrontierDollar`
 
 ```typescript
 transferOverallFrontierDollar(
   to: string,
-  amount: string,
+  amount: bigint,
   overrides?: GasOverrides
 ): Promise<UserOperationReceipt>
 ```
@@ -111,10 +106,10 @@ swap(
   targetToken: string,
   sourceNetwork: string,
   targetNetwork: string,
-  amount: string
+  amount: bigint
 ): Promise<SwapResult>
 ```
-Execute a token swap (same-chain or cross-chain). Amount is human-readable. Permission: `wallet:swap`
+Execute a token swap (same-chain or cross-chain). Amount in base units — build with `parseAmount('10.5')` from `@frontiertower/frontier-sdk`. Permission: `wallet:swap`
 
 ```typescript
 quoteSwap(
@@ -122,7 +117,7 @@ quoteSwap(
   targetToken: string,
   sourceNetwork: string,
   targetNetwork: string,
-  amount: string
+  amount: bigint
 ): Promise<SwapQuote>
 ```
 Get a swap quote without executing. Permission: `wallet:quoteSwap`
@@ -197,12 +192,6 @@ interface WalletBalance {
   internalFnd: bigint;
 }
 
-interface WalletBalanceFormatted {
-  total: string;    // e.g. '$10.50'
-  fnd: string;
-  internalFnd: string;
-}
-
 interface UserOperationReceipt {
   userOpHash: string;
   transactionHash: string;
@@ -227,7 +216,7 @@ interface SwapParams {
   targetToken: string;
   sourceNetwork: string;
   targetNetwork: string;
-  amount: string;
+  amount: bigint;
 }
 
 enum SwapResultStatus {
@@ -248,8 +237,8 @@ interface SwapQuote {
   targetChain: object;
   sourceToken: object;
   targetToken: object;
-  expectedAmountOut: string;
-  minAmountOut: string;
+  expectedAmountOut: bigint;
+  minAmountOut: bigint;
 }
 
 interface UsdDepositInstructions {
@@ -318,12 +307,11 @@ interface DeprecatedSmartAccount {
 
 ---
 
-## Permissions (22)
+## Permissions (21)
 
 | Permission | Description |
 |---|---|
 | `wallet:getBalance` | Access wallet balance (raw bigint) |
-| `wallet:getBalanceFormatted` | Access formatted wallet balance (display strings) |
 | `wallet:getAddress` | Access wallet address |
 | `wallet:getSmartAccount` | Access smart account details |
 | `wallet:transferERC20` | Transfer ERC20 tokens |

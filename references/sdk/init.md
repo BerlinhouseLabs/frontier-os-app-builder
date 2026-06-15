@@ -1,10 +1,12 @@
 # SDK Initialization & Core Protocol
 
-Frontier SDK v0.20.0 — `@frontiertower/frontier-sdk`
+Frontier SDK v0.24.0 — `@frontiertower/frontier-sdk`
 
 Import paths:
 - `@frontiertower/frontier-sdk` -- main SDK class and access modules
 - `@frontiertower/frontier-sdk/ui-utils` -- detection and standalone helpers
+
+The package **root** also exports the bigint token-amount helpers `parseAmount`, `formatAmount`, `FND_DECIMALS`, and `InvalidAmountError` (from `@frontiertower/frontier-sdk`, **not** `/ui-utils`) — the canonical bridge for displaying and parsing the now-`bigint` FND amounts. See [`token-amount.md`](./token-amount.md).
 
 ---
 
@@ -71,14 +73,12 @@ interface SDKResponse {
 
 ### Allowed Origins
 
-The SDK defines five allowed Frontier Wallet origins. Apps should only accept messages from these:
+The SDK defines three allowed Frontier Wallet origins. Apps should only accept messages from these:
 
 | Environment | Origin |
 |---|---|
 | Development | `http://localhost:5173` |
 | Sandbox | `https://sandbox.os.frontiertower.io` |
-| Alpha | `https://alpha.os.frontiertower.io` |
-| Beta | `https://beta.os.frontiertower.io` |
 | Production | `https://os.frontiertower.io` |
 
 ### Access Controls Verification
@@ -96,7 +96,7 @@ Supported stages and their public keys (uncompressed secp256k1, hex):
 |---|---|
 | `test` | `04aab6c393...` (test-only key) |
 | `development`, `local`, `sandbox`, `staging` | `04dc3ab0e1...` (shared dev/sandbox key) |
-| `alpha`, `beta`, `production` | `045d1a0f9c...` (production key) |
+| `production` | `045d1a0f9c...` (production key) |
 
 **Rule: Always use `getVerifiedAccessControls()` for access-gating decisions.** Do not trust unsigned user data from other SDK methods for gating features, content, or permissions.
 

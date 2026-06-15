@@ -48,16 +48,17 @@ If CONTEXT.md exists, it constrains your research scope. Don't explore alternati
 All production apps live at `~/frontieros/frontier-os-app-*`. Use this mapping to identify which apps to study based on the current phase's feature needs.
 
 ### Wallet / Payments / Transactions
-**Apps:** `frontier-os-app-pos`, `frontier-os-app-pos-payment`, `frontier-os-app-subscriptions`
+**Preferred apps (v0.23+ bigint amounts — study these first):** `frontier-os-app-fiat-rails` (bigint `transferFrontierDollar`/transfers + on/off-ramp), `frontier-os-app-ifnd-converter` (gold v0.24 migration — `getBalance()` + `formatAmount()`/`parseAmount()` patterns)
+**Legacy apps (PRE-bigint — useful for UI/flow patterns only, NOT for amount handling):** `frontier-os-app-pos`, `frontier-os-app-pos-payment`, `frontier-os-app-subscriptions`. WARNING: these predate v0.23, use `amount: string`, and `pos`/`pos-payment` still call the REMOVED `getBalanceFormatted()`. Do NOT copy their amount/balance code — use the preferred apps for that.
 **What to study:**
-- `transferFrontierDollar()` and `transferOverallFrontierDollar()` call patterns
+- `transferFrontierDollar()` and `transferOverallFrontierDollar()` call patterns — amounts are `bigint` base units (v0.23+); build with `parseAmount('10.5')` from `@frontiertower/frontier-sdk`
 - Payment confirmation flows and receipt UI
-- Balance display with `getBalanceFormatted()`
+- Balance display: `getBalance()` returns `WalletBalance { total, fnd, internalFnd }` (all `bigint`); format each field with `formatAmount()` from `@frontiertower/frontier-sdk`
 - Transaction error handling and retry patterns
 - Loading states during biometric auth prompts
 
 ### Events / Bookings / Reservations
-**Apps:** `frontier-os-app-superhero-hotel`
+**Apps:** `frontier-os-app-superhero-hotel` (PRE-bigint, v0.15.x — good for event/booking UI + flow patterns; if the phase touches FND amounts or the new event security-deposit methods, take amount/balance patterns from the v0.23+ Wallet apps above instead)
 **What to study:**
 - Event listing and detail views
 - Booking flow (date selection, confirmation, payment)
@@ -79,7 +80,7 @@ All production apps live at `~/frontieros/frontier-os-app-*`. Use this mapping t
 - Reward tracking with wallet integration
 
 ### Maintenance / AI / Tools
-**Apps:** `frontier-os-app-maintenance`
+**Apps:** `frontier-os-app-maintenance` (PRE-bigint, v0.15.x — good for ThirdParty/AI integration + tool-layout patterns; do not copy any FND amount/balance handling from it)
 **What to study:**
 - ThirdParty module usage
 - AI/ML integration patterns
@@ -201,20 +202,21 @@ For every SDK module relevant to the phase, document:
 ```typescript
 // Import
 import { useSdk } from '../lib/sdk-context';
+import { formatAmount } from '@frontiertower/frontier-sdk'; // bigint -> display string (package root, NOT /ui-utils)
 
 // In component
 const sdk = useSdk();
 const wallet = sdk.getWallet();
 
-// Call pattern
-const [balance, setBalance] = useState<WalletBalanceFormatted | null>(null);
+// Call pattern — getBalance() returns WalletBalance { total, fnd, internalFnd } (all bigint base units)
+const [balance, setBalance] = useState<WalletBalance | null>(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState<string | null>(null);
 
 useEffect(() => {
   const fetchBalance = async () => {
     try {
-      const result = await wallet.getBalanceFormatted();
+      const result = await wallet.getBalance(); // display via formatAmount(result.fnd) — getBalanceFormatted() was REMOVED in v0.23
       setBalance(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load balance');
@@ -225,7 +227,8 @@ useEffect(() => {
   fetchBalance();
 }, [wallet]);
 
-// Permission: wallet:getBalanceFormatted
+// Display: formatAmount(balance.total) — symbol-free decimal string; prepend '$' yourself if wanted
+// Permission: wallet:getBalance (import { formatAmount } from '@frontiertower/frontier-sdk')
 ```
 
 ### 2. Component Structure

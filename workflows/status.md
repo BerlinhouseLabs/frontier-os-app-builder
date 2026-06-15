@@ -119,7 +119,6 @@ done
 
 wallet:
   - wallet:getBalance
-  - wallet:getBalanceFormatted
   - wallet:transferFrontierDollar
 
 events:

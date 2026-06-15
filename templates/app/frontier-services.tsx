@@ -1,5 +1,15 @@
 import { createContext, useContext, type ReactNode } from 'react';
 
+// ── Token amounts (bigint base units) ────────────────────────────────────────
+//
+// Since Frontier SDK v0.23, all FND amounts are bigint base units (FND_DECIMALS = 6).
+// WalletBalance fields and every transfer*/swap amount are bigint, NOT display strings.
+//   - Display a balance:  formatAmount(b.fnd)   → symbol-free decimal string (100_500000n → '100.5')
+//   - Parse user input:   parseAmount('10.5')   → bigint (throws InvalidAmountError on bad input)
+//   - Write:              wallet.transferFrontierDollar(to, parseAmount('10.5'))
+// Import formatAmount / parseAmount / FND_DECIMALS / InvalidAmountError from the package
+// ROOT '@frontiertower/frontier-sdk' (NOT the /ui-utils subpath). The SDK never adds '$'.
+
 // ── Shared Types ────────────────────────────────────────────────────────────
 
 export interface PaginatedResponse<T> {
@@ -13,12 +23,6 @@ export interface WalletBalance {
   total: bigint;
   fnd: bigint;
   internalFnd: bigint;
-}
-
-export interface WalletBalanceFormatted {
-  total: string;
-  fnd: string;
-  internalFnd: string;
 }
 
 export interface SmartAccount {
@@ -63,8 +67,8 @@ export interface SwapQuote {
   targetChain: object;
   sourceToken: object;
   targetToken: object;
-  expectedAmountOut: string;
-  minAmountOut: string;
+  expectedAmountOut: bigint;
+  minAmountOut: bigint;
 }
 
 export interface OnRampResponse<T> {
@@ -407,6 +411,57 @@ export interface FrontierEvent {
   color: string;
   reviewStatus: string;
   status: string;
+  isHost?: boolean;
+  deposit?: EventDeposit | null;
+}
+
+// ── Events Deposit Types ──────────────────────────────────────────────────────
+
+export type DepositStatus =
+  | 'not_required'
+  | 'required'
+  | 'pending'
+  | 'secured'
+  | 'released'
+  | 'withheld'
+  | 'failed';
+
+export type CryptoDepositStatus =
+  | 'secured'
+  | 'awaiting_payment'
+  | 'grant'
+  | 'released'
+  | 'withheld'
+  | 'failed';
+
+export interface EventDeposit {
+  status: DepositStatus;
+  amount: number;
+  currency: string;
+}
+
+export interface DepositPreflightToken {
+  key: string;
+  address: string;
+  decimals: number;
+  baseUnits: string;
+}
+
+export interface DepositPreflight {
+  spender: string;
+  network: string;
+  amount: string;
+  currency: string;
+  tokens: DepositPreflightToken[];
+}
+
+export interface DepositResult {
+  provider: 'crypto';
+  status: CryptoDepositStatus;
+  amount: string;
+  currency: string;
+  reference: string;
+  statusReason: string;
 }
 
 export interface EventLocation {
@@ -481,7 +536,6 @@ export interface DeepLinkData {
 
 export interface WalletService {
   getBalance(): Promise<WalletBalance>;
-  getBalanceFormatted(): Promise<WalletBalanceFormatted>;
   getAddress(): Promise<string>;
   getSmartAccount(): Promise<SmartAccount>;
   transferERC20(tokenAddress: string, to: string, amount: bigint, overrides?: GasOverrides): Promise<UserOperationReceipt>;
@@ -489,12 +543,12 @@ export interface WalletService {
   transferNative(to: string, amount: bigint, overrides?: GasOverrides): Promise<UserOperationReceipt>;
   executeCall(call: ExecuteCall, overrides?: GasOverrides): Promise<UserOperationReceipt>;
   executeBatchCall(calls: ExecuteCall[], overrides?: GasOverrides): Promise<UserOperationReceipt>;
-  transferFrontierDollar(to: string, amount: string, overrides?: GasOverrides): Promise<UserOperationReceipt>;
-  transferInternalFrontierDollar(to: string, amount: string, overrides?: GasOverrides): Promise<UserOperationReceipt>;
-  transferOverallFrontierDollar(to: string, amount: string, overrides?: GasOverrides): Promise<UserOperationReceipt>;
+  transferFrontierDollar(to: string, amount: bigint, overrides?: GasOverrides): Promise<UserOperationReceipt>;
+  transferInternalFrontierDollar(to: string, amount: bigint, overrides?: GasOverrides): Promise<UserOperationReceipt>;
+  transferOverallFrontierDollar(to: string, amount: bigint, overrides?: GasOverrides): Promise<UserOperationReceipt>;
   getSupportedTokens(): Promise<string[]>;
-  swap(sourceToken: string, targetToken: string, sourceNetwork: string, targetNetwork: string, amount: string): Promise<SwapResult>;
-  quoteSwap(sourceToken: string, targetToken: string, sourceNetwork: string, targetNetwork: string, amount: string): Promise<SwapQuote>;
+  swap(sourceToken: string, targetToken: string, sourceNetwork: string, targetNetwork: string, amount: bigint): Promise<SwapResult>;
+  quoteSwap(sourceToken: string, targetToken: string, sourceNetwork: string, targetNetwork: string, amount: bigint): Promise<SwapQuote>;
   getUsdDepositInstructions(): Promise<OnRampResponse<UsdDepositInstructions>>;
   getEurDepositInstructions(): Promise<OnRampResponse<EurDepositInstructions>>;
   getLinkedBanks(): Promise<LinkedBanksResponse>;
@@ -579,6 +633,8 @@ export interface EventsService {
   listLocations(payload?: { locationType?: LocationType }): Promise<EventLocation[]>;
   listRoomBookings(payload?: { locationId?: string; date?: string; startDate?: string; endDate?: string; page?: number }): Promise<PaginatedResponse<RoomBooking>>;
   createRoomBooking(payload: { startsAt: string; endsAt: string; location: string }): Promise<RoomBooking>;
+  getCryptoDepositPreflight(payload: { eventId: number }): Promise<DepositPreflight>;
+  placeCryptoDeposit(payload: { eventId: number }): Promise<DepositResult>;
 }
 
 export interface OfficesService {
@@ -639,7 +695,6 @@ async function mockWriteOp(module: string, method: string): Promise<UserOperatio
 export function createMockServices(): FrontierServices {
   const wallet: WalletService = {
     async getBalance() { mockLog('wallet', 'getBalance'); return { total: BigInt(10_500000), fnd: BigInt(7_500000), internalFnd: BigInt(3_000000) }; },
-    async getBalanceFormatted() { mockLog('wallet', 'getBalanceFormatted'); return { total: '$100.00', fnd: '$75.00', internalFnd: '$25.00' }; },
     async getAddress() { mockLog('wallet', 'getAddress'); return '0x1234567890abcdef1234567890abcdef12345678'; },
     async getSmartAccount() { mockLog('wallet', 'getSmartAccount'); return { id: 1, ownerAddress: '0xowner', contractAddress: '0xcontract', network: 'base-sepolia', status: 'deployed', deploymentTransactionHash: '0xdeploy', createdAt: new Date().toISOString() }; },
     async transferERC20() { return mockWriteOp('wallet', 'transferERC20'); },
@@ -652,7 +707,7 @@ export function createMockServices(): FrontierServices {
     async transferOverallFrontierDollar() { return mockWriteOp('wallet', 'transferOverallFrontierDollar'); },
     async getSupportedTokens() { mockLog('wallet', 'getSupportedTokens'); return ['FND', 'USDC', 'WETH']; },
     async swap() { mockLog('wallet', 'swap'); await delay(1000); return { sourceChain: {}, targetChain: {}, sourceToken: {}, targetToken: {}, status: 'COMPLETED' as const }; },
-    async quoteSwap() { mockLog('wallet', 'quoteSwap'); return { sourceChain: {}, targetChain: {}, sourceToken: {}, targetToken: {}, expectedAmountOut: '10.00', minAmountOut: '9.95' }; },
+    async quoteSwap() { mockLog('wallet', 'quoteSwap'); return { sourceChain: {}, targetChain: {}, sourceToken: {}, targetToken: {}, expectedAmountOut: BigInt(10_000000), minAmountOut: BigInt(9_950000) }; },
     async getUsdDepositInstructions() { mockLog('wallet', 'getUsdDepositInstructions'); return { currency: 'usd', depositInstructions: { currency: 'usd', bankName: 'Mock Bank', bankAddress: '123 Mock St', bankRoutingNumber: '000000000', bankAccountNumber: '1234567890', bankBeneficiaryName: 'Frontier Mock', paymentRail: 'ach' }, destinationAddress: '0xdest', destinationNetwork: 'base' }; },
     async getEurDepositInstructions() { mockLog('wallet', 'getEurDepositInstructions'); return { currency: 'eur', depositInstructions: { currency: 'eur', iban: 'DE00000000000000000000', bic: 'MOCKDEFF', accountHolderName: 'Frontier Mock' }, destinationAddress: '0xdest', destinationNetwork: 'base' }; },
     async getLinkedBanks() { mockLog('wallet', 'getLinkedBanks'); return { banks: [] }; },
@@ -765,6 +820,8 @@ export function createMockServices(): FrontierServices {
     async listLocations() { mockLog('events', 'listLocations'); return []; },
     async listRoomBookings() { mockLog('events', 'listRoomBookings'); return emptyPage(); },
     async createRoomBooking() { mockLog('events', 'createRoomBooking'); await delay(1000); return { id: 1, startsAt: new Date().toISOString(), endsAt: new Date(Date.now() + 3600000).toISOString(), location: 'mock-room' }; },
+    async getCryptoDepositPreflight() { mockLog('events', 'getCryptoDepositPreflight'); return { spender: '0xspender', network: 'base-sepolia', amount: '400.00', currency: 'usd', tokens: [{ key: 'ifnd_token', address: '0xifnd', decimals: 6, baseUnits: '400000000' }, { key: 'fnd_token', address: '0xfnd', decimals: 6, baseUnits: '400000000' }] }; },
+    async placeCryptoDeposit() { mockLog('events', 'placeCryptoDeposit'); await delay(1000); return { provider: 'crypto', status: 'secured', amount: '400.00', currency: 'usd', reference: '0xmocktxhash', statusReason: '' }; },
   };
 
   const offices: OfficesService = {
