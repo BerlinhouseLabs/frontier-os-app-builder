@@ -16,6 +16,12 @@
     "templates/",
     "README.md"
   ],
+  "scripts": {
+    "prepublishOnly": "node --check bin/install.js && node bin/fos-tools.cjs version"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "keywords": [
     "frontier-os",
     "claude-code",

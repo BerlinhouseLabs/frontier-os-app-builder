@@ -104,15 +104,16 @@ function install() {
   log('Installing agents...');
   const agentSrc = path.join(SRC_ROOT, 'agents');
   const agentDest = path.join(CLAUDE_HOME, 'agents');
+  let agentCount = 0;
   if (fs.existsSync(agentSrc)) {
     for (const file of fs.readdirSync(agentSrc)) {
       if (file.startsWith('fos-') && file.endsWith('.md')) {
         const dest = copyFile(path.join(agentSrc, file), path.join(agentDest, file));
         installedFiles.push(dest);
+        agentCount++;
       }
     }
   }
-  const agentCount = installedFiles.filter(f => f.includes('/agents/fos-')).length;
   success(`${agentCount} agents → ~/.claude/agents/`);
 
   // 3. Workflows → ~/.claude/frontier-os-app-builder/workflows/
@@ -149,7 +150,8 @@ function install() {
     success(`CLI tool → ~/.claude/${PRODUCT}/bin/fos-tools.cjs`);
   }
 
-  // 7. Write manifest
+  // 7. Write manifest (record its own path first so uninstall removes it)
+  installedFiles.push(MANIFEST_PATH);
   const manifest = {
     version: VERSION,
     installed_at: new Date().toISOString(),
@@ -157,7 +159,6 @@ function install() {
   };
   ensureDir(path.dirname(MANIFEST_PATH));
   fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
-  installedFiles.push(MANIFEST_PATH);
 
   // Summary
   console.log(`\n\x1b[32m  ✓ Installed ${installedFiles.length} files\x1b[0m\n`);
@@ -185,11 +186,13 @@ function uninstall() {
     }
   }
 
-  // Clean up directories
+  // Clean up directories (deepest-first: prune child dirs before their parents)
   const dirsToClean = [
     path.join(CLAUDE_HOME, 'commands', 'fos'),
     path.join(FOS_HOME, 'workflows'),
+    path.join(FOS_HOME, 'references', 'sdk'),
     path.join(FOS_HOME, 'references'),
+    path.join(FOS_HOME, 'templates', 'app', 'public'),
     path.join(FOS_HOME, 'templates', 'app'),
     path.join(FOS_HOME, 'templates', 'state'),
     path.join(FOS_HOME, 'templates'),

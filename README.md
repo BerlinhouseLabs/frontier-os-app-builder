@@ -17,6 +17,8 @@ npx frontier-os-app-builder
 
 That's it. This installs `/fos:*` commands into your Claude Code environment.
 
+> Running `npx frontier-os-app-builder` executes the installer automatically. If you install globally instead (`npm i -g frontier-os-app-builder`), run `frontier-os-app-builder` once afterward to populate `~/.claude`.
+
 To uninstall:
 
 ```bash
@@ -71,6 +73,12 @@ npx frontier-os-app-builder --uninstall
 | `/fos:add-feature` | Add a feature as a new phase to the current milestone |
 | `/fos:next` | Auto-route to the next step in the workflow |
 | `/fos:status` | Show current project state |
+
+## Configuration
+
+| Environment variable | Used by | Effect |
+|---|---|---|
+| `FOS_GITHUB_ORG` | `/fos:ship` | Creates the deployed app's GitHub repo under this organization. When unset (the default), the repo is created under your authenticated `gh` user account. |
 
 ## How it works
 

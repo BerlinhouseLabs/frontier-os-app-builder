@@ -91,14 +91,19 @@ else
   TEST_STATUS=0
 fi
 
+# Read the SDK Integration phase from the manifest so the validators run their
+# Tier-2 checks (CORS origins, SDK→services bridge, exact permissions). Empty
+# when no sdkPhase is set — the validator then falls back to the STATE.md phase.
+SDK_PHASE=$(node -e "const m=JSON.parse(require('fs').readFileSync('.frontier-app/manifest.json','utf8')); console.log(m.sdkPhase ?? '')")
+
 # 4. FOS structure validation
 echo "--- Structure ---"
-node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" validate structure
+node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" validate structure --phase "$SDK_PHASE"
 STRUCT_STATUS=$?
 
 # 5. FOS permissions validation
 echo "--- Permissions ---"
-node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" validate permissions
+node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" validate permissions --phase "$SDK_PHASE"
 PERMS_STATUS=$?
 ```
 
@@ -173,9 +178,16 @@ Read the app name from manifest.json to construct the repo name.
 PACKAGE_NAME=$(node -e "const m=JSON.parse(require('fs').readFileSync('.frontier-app/manifest.json','utf8')); console.log(m.packageName)")
 REPO_NAME="frontier-os-${PACKAGE_NAME}"
 APP_DESC=$(node -e "const m=JSON.parse(require('fs').readFileSync('.frontier-app/manifest.json','utf8')); console.log(m.description)")
-ORG="BerlinhouseLabs"
+# Org is optional. Set FOS_GITHUB_ORG to create the repo under a GitHub org;
+# when it's empty the repo is created under the authenticated gh user.
+ORG="${FOS_GITHUB_ORG:-}"
+if [ -n "$ORG" ]; then
+  REPO_TARGET="$ORG/$REPO_NAME"
+else
+  REPO_TARGET="$REPO_NAME"
+fi
 
-echo "Repo: $ORG/$REPO_NAME"
+echo "Repo: $REPO_TARGET"
 ```
 
 **Check if remote already exists:**
@@ -185,16 +197,17 @@ git remote get-url origin 2>/dev/null
 
 **If no remote:**
 ```bash
-# Create private repo in the org
-gh repo create "$ORG/$REPO_NAME" --private --description "$APP_DESC" --source . --push
+# Create private repo (under $FOS_GITHUB_ORG if set, else the authed gh user)
+gh repo create "$REPO_TARGET" --private --description "$APP_DESC" --source . --push
 
 # Verify
-gh repo view "$ORG/$REPO_NAME" --json url -q .url
+gh repo view "$REPO_TARGET" --json url -q .url
 ```
 
 **If remote already exists:** Just push.
 ```bash
-git push -u origin main
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo main)
+git push -u origin "$BRANCH"
 ```
 </step>
 

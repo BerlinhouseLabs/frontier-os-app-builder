@@ -48,7 +48,7 @@ The `src/` directory must contain at minimum:
 src/
   main.tsx
   lib/
-    sdk-context.tsx
+    frontier-services.tsx
   views/
     Layout.tsx
   styles/
@@ -69,6 +69,8 @@ src/
     hooks/
     components/
 ```
+
+> **Note:** `src/lib/sdk-context.tsx` and `src/lib/sdk-services.tsx` exist only **after** the SDK Integration phase (Tier 2). They are not present during pre-integration phases, so S-02 (a Tier-1 check that runs after every phase) must not require them.
 
 **Pass condition:** All required paths exist. Optional paths should be present when the corresponding feature is used (e.g., `router.tsx` when `react-router-dom` is a dependency).
 
@@ -145,11 +147,11 @@ When inside the Frontier app, the Layout must wrap its children with `<SdkProvid
 
 ### I-04: useSdk() hook available and used
 
-`src/lib/sdk-context.tsx` must export `useSdk` and `SdkProvider`. Any view component that accesses the SDK must call `useSdk()`.
+`src/lib/sdk-context.tsx` must export `useSdk` and `SdkProvider`. Only `sdk-services.tsx` and `src/views/Layout.tsx` may consume them; feature code under `src/hooks/`, `src/views/`, and `src/components/` accesses the SDK indirectly through `useServices()` (see M-03), never `useSdk()` directly.
 
 **Pass condition:**
 - `sdk-context.tsx` exports `useSdk` and `SdkProvider`.
-- Every file that accesses SDK methods imports `useSdk` from `../lib/sdk-context` (or appropriate relative path) and calls it within the component body.
+- `useSdk()` / `SdkProvider` are consumed only by `sdk-services.tsx` and `Layout.tsx`; feature code uses `useServices()` from `../lib/frontier-services` (see M-03), not `useSdk`.
 - No direct `new FrontierSDK()` calls outside of `sdk-context.tsx`.
 
 ---

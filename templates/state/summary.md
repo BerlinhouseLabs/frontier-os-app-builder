@@ -71,8 +71,8 @@ Each task was committed atomically:
 
 ## Files Created/Modified
 
-- `src/App.tsx` — What it does
-- `src/lib/sdk-context.tsx` — What it does
+- `src/main.tsx` — What it does
+- `src/lib/frontier-services.tsx` — What it does
 
 ## SDK Integration Notes
 
@@ -136,7 +136,7 @@ Or "No SDK module integration in this plan" if scaffold-only.]
 
 **One-liner:**
 Must be substantive. Examples:
-- "Vite + React scaffold with SdkProvider, iframe detection, and dark Tailwind theme"
+- "Vite + React scaffold with mock services layer, FrontierServicesProvider, and dark Tailwind theme"
 - "Event listing page with real-time updates via Events SDK module"
 - "Wallet integration for USDC payments with transaction confirmation UI"
 
@@ -164,30 +164,30 @@ NOT: "Phase complete" / "Scaffold done" / "Feature implemented"
 phase: 01-scaffold
 plan: 01
 subsystem: scaffold
-tags: [react, vite, tailwind, frontier-sdk, iframe-detection]
+tags: [react, vite, tailwind, mock-services, standalone]
 
 requires: []
 provides:
   - "Vite + React project structure"
-  - "SdkProvider context with useSdk hook"
-  - "Iframe detection with standalone fallback"
+  - "FrontierServicesProvider context with useServices hook"
+  - "Mock services layer via createMockServices()"
   - "Dark theme via Tailwind"
 affects: [02-event-listing, 03-event-creation]
 
 tech-stack:
-  added: [react, vite, tailwind, @frontiertower/frontier-sdk]
-  patterns: [SdkProvider wrapper, useSdk hook, iframe detection utility]
+  added: [react, react-dom, react-router-dom, vite, tailwindcss, vitest]
+  patterns: [FrontierServicesProvider + useServices(), mock services layer, dark Tailwind 4 @theme]
 
 key-files:
-  created: [src/App.tsx, src/lib/sdk-context.tsx, src/lib/iframe.ts, src/components/Layout.tsx]
+  created: [src/main.tsx, src/lib/frontier-services.tsx, src/views/Layout.tsx, src/styles/index.css, vite.config.ts, tsconfig.json, postcss.config.js, index.html]
   modified: []
 
 key-decisions:
   - "Used Tailwind for styling — matches Frontier OS design system"
-  - "Iframe detection via window.self !== window.top with fallback UI"
+  - "Standalone-first: feature code consumes useServices(), never the SDK directly"
 
 patterns-established:
-  - "SdkProvider: All SDK access via useSdk() hook, never direct instantiation"
+  - "Services: All data access via useServices() hook; mocks until SDK Integration"
   - "Dark theme: bg-neutral-950 base, text-white, no light mode support"
 
 sdk-modules-used: []
@@ -200,7 +200,7 @@ completed: 2026-03-27
 
 # Phase 1: Scaffold + Standalone Shell — Plan 1 Summary
 
-**Vite + React scaffold with services layer, mock data, dark Tailwind theme on port 5180**
+**Vite + React scaffold with mock services layer, FrontierServicesProvider, and dark Tailwind theme on port 5180**
 
 ## Performance
 
@@ -213,38 +213,35 @@ completed: 2026-03-27
 ## Accomplishments
 
 - Full Vite + React + TypeScript project scaffolded
-- SdkProvider wraps app, useSdk() available everywhere
-- Iframe detection works — shows standalone banner when not in Frontier OS
+- FrontierServicesProvider wraps app, useServices() available everywhere
+- Mock services layer returns realistic data via createMockServices()
 - Dark theme via Tailwind — bg-neutral-950 base, all components dark
 
 ## Task Commits
 
 1. **Task 1: Scaffold Vite project** — `a1b2c3d` (feat: scaffold)
-2. **Task 2: SdkProvider + iframe detection** — `e4f5g6h` (feat: sdk integration)
+2. **Task 2: FrontierServicesProvider + mock services** — `e4f5g6h` (feat: services layer)
 3. **Task 3: Dark theme + layout** — `i7j8k9l` (feat: dark theme)
 
 ## Files Created/Modified
 
-- `src/App.tsx` — Root component with SdkProvider
-- `src/lib/sdk-context.tsx` — SdkProvider + useSdk hook
-- `src/lib/iframe.ts` — Iframe detection utility
-- `src/components/Layout.tsx` — Dark theme shell
-- `vite.config.ts` — Dev server on port 5180
-- `tailwind.config.ts` — Dark theme configuration
+- `src/main.tsx` — React root; wraps the app in FrontierServicesProvider
+- `src/lib/frontier-services.tsx` — FrontierServicesProvider + useServices() hook + createMockServices()
+- `src/views/Layout.tsx` — Dark theme shell
+- `src/styles/index.css` — Tailwind + dark theme variables
+- `vite.config.ts` — Vite + Vitest, dev server on port 5180
 - `tsconfig.json` — TypeScript strict mode
 - `postcss.config.js` — Tailwind PostCSS setup
+- `index.html` — Entry HTML with `<body class="dark">`
 
 ## SDK Integration Notes
 
-- SDK initialized once in SdkProvider via useRef to prevent re-instantiation
-- SDK destroyed on unmount via cleanup in useEffect
-- useSdk() throws if used outside SdkProvider — fail-fast pattern
-- No SDK modules used yet — just core initialization
+No SDK in this phase — services come from `createMockServices()`; the real SDK is wired in the final SDK Integration phase.
 
 ## Decisions Made
 
 - Used Tailwind instead of CSS modules — better dark theme support, matches Frontier OS
-- Iframe detection uses window.self !== window.top — simple, reliable
+- Standalone-first: feature code consumes useServices(), keeping the SDK out of Phase 1
 
 ## Deviations from Plan
 
@@ -256,13 +253,13 @@ None — plan executed exactly as written
 - [x] Dev server: pass on port 5180
 - [x] TypeScript: pass (strict mode, no errors)
 - [x] Dark theme: pass (no white backgrounds)
-- [x] Iframe mode: pass (renders in Frontier OS)
-- [x] Standalone mode: pass (shows fallback banner)
+- [x] Iframe mode: N/A (wired during SDK Integration phase)
+- [x] Standalone mode: pass (renders with mock data)
 
 ## Next Phase Readiness
 
 - Scaffold complete, ready for feature development
-- SdkProvider available for module integration in Phase 2
+- useServices() available for feature hooks in Phase 2
 - No blockers
 
 ---

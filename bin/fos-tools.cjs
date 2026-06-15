@@ -421,8 +421,11 @@ function cmdValidateStructure(cwd, flags) {
   const manifest = loadManifest(cwd);
   const sdkPhase = manifest && manifest.sdkPhase != null ? manifest.sdkPhase : null;
   const currentPhase = flags.phase ? parseInt(flags.phase, 10) : null;
+  // Fallback to STATE.md phase when --phase not passed, so the Tier-2 gate works even if a caller forgets the flag
+  const fallbackPhase = flags.phase == null ? (loadState(cwd)?.frontmatter?.phase ?? null) : null;
+  const effectivePhase = currentPhase ?? fallbackPhase;
   // Tier 2 only when sdkPhase is set AND current phase matches sdkPhase
-  const isTier2 = sdkPhase != null && currentPhase != null && currentPhase === sdkPhase;
+  const isTier2 = sdkPhase != null && effectivePhase != null && effectivePhase === sdkPhase;
   // Backward compat: if no sdkPhase in manifest, run all checks (legacy SDK-first apps)
   const isLegacy = sdkPhase == null;
 
@@ -546,7 +549,10 @@ function cmdValidatePermissions(cwd, flags) {
   // Determine tier
   const sdkPhase = manifest.sdkPhase != null ? manifest.sdkPhase : null;
   const currentPhase = flags.phase ? parseInt(flags.phase, 10) : null;
-  const isTier2 = sdkPhase != null && currentPhase != null && currentPhase === sdkPhase;
+  // Fallback to STATE.md phase when --phase not passed, so the Tier-2 gate works even if a caller forgets the flag
+  const fallbackPhase = flags.phase == null ? (loadState(cwd)?.frontmatter?.phase ?? null) : null;
+  const effectivePhase = currentPhase ?? fallbackPhase;
+  const isTier2 = sdkPhase != null && effectivePhase != null && effectivePhase === sdkPhase;
   const isLegacy = sdkPhase == null;
 
   // Find all SDK method calls in source (both patterns)
@@ -593,7 +599,7 @@ function cmdValidatePermissions(cwd, flags) {
   for (const method of usedMethods) {
     // Try to find matching permission
     for (const [pattern, perm] of Object.entries(methodToPermission)) {
-      if (method.includes(pattern.split('.')[0]) && !declaredPerms.has(perm)) {
+      if (method === pattern && !declaredPerms.has(perm)) {
         missingPerms.push({ method, permission: perm });
       }
     }
@@ -773,13 +779,14 @@ function cmdCommit(message, files, flags) {
 
 function main() {
   const args = process.argv.slice(2);
-  const flags = { raw: false, pick: null };
+  const flags = { raw: false, pick: null, phase: null };
 
   // Extract flags
   const cleanArgs = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--raw') { flags.raw = true; }
     else if (args[i] === '--pick' && args[i + 1]) { flags.pick = args[++i]; }
+    else if (args[i] === '--phase' && args[i + 1]) { flags.phase = args[++i]; }
     else { cleanArgs.push(args[i]); }
   }
 

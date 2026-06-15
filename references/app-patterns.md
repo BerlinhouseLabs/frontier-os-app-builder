@@ -74,7 +74,7 @@ This file provides the `useServices()` hook and `FrontierServicesProvider`. It i
 ### `src/lib/sdk-context.tsx` — identical across all apps, created during SDK Integration phase (not at scaffold time)
 
 ```tsx
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { FrontierSDK } from '@frontiertower/frontier-sdk';
 
 const SdkContext = createContext<FrontierSDK | null>(null);
@@ -86,28 +86,28 @@ export const useSdk = (): FrontierSDK => {
 };
 
 export const SdkProvider = ({ children }: { children: ReactNode }) => {
-  const sdkRef = useRef<FrontierSDK | null>(null);
-  const [ready, setReady] = useState(false);
+  const [sdk, setSdk] = useState<FrontierSDK | null>(null);
 
   useEffect(() => {
-    const sdk = new FrontierSDK();
-    sdkRef.current = sdk;
-    setReady(true);
+    const instance = new FrontierSDK();
+    setSdk(instance);
 
     return () => {
-      sdk.destroy();
+      instance.destroy();
     };
   }, []);
 
-  if (!ready) return null;
+  if (!sdk) return null;
 
   return (
-    <SdkContext.Provider value={sdkRef.current}>
+    <SdkContext.Provider value={sdk}>
       {children}
     </SdkContext.Provider>
   );
 };
 ```
+
+> The SDK is held in `useState` (not a `useRef`): under React StrictMode the effect runs mount → cleanup → mount, so the first instance is created then destroyed. Storing it in state makes the second `setSdk(...)` re-render the Provider with the live instance, instead of leaving consumers pinned to the destroyed one. Do not "simplify" this back to a ref.
 
 ### `src/lib/sdk-services.tsx` — identical across all apps, created during SDK Integration phase (not at scaffold time)
 
@@ -423,13 +423,25 @@ export const router = createBrowserRouter([
 ]);
 ```
 
-### Single-Component Variant
+### Simple Apps (Single View)
 
-For very simple apps that need only one view, the router can be omitted. In this case:
-- `main.tsx` renders the Layout directly instead of `<RouterProvider>`
-- `Layout.tsx` renders the single view component instead of `<Outlet />`
-- No `router.tsx` file needed
-- `react-router-dom` can be removed from dependencies
+Even an app with only one view uses the router — there is no "render the Layout directly from `main.tsx`" path. Define a single index route so `Layout` stays in the render tree:
+
+```tsx
+import { createBrowserRouter } from 'react-router-dom';
+import { Layout } from './views/Layout';
+import { Home } from './views/Home';
+
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <Layout />,
+    children: [{ index: true, element: <Home /> }],
+  },
+]);
+```
+
+Keeping `Layout` mounted preserves the services seam: standalone it provides `FrontierServicesProvider`, and after SDK Integration it wraps the app in `SdkProvider` + `SdkServicesBridge` so `useServices()` resolves against the real SDK. `react-router-dom` stays a dependency. Do not bypass the router by rendering a view straight from `main.tsx` — that skips the Layout bridge and ships mock services in-frame.
 
 ### `main.tsx` (Identical Pattern)
 
