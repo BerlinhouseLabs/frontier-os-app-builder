@@ -31,15 +31,21 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    /* Hide scrollbars — apps render inside a phone frame, and phones use overlay
-       scrollbars (invisible until actively scrolling). A persistent desktop bar
-       breaks the illusion. Scrolling still works via touch/wheel/drag. */
-    scrollbar-width: none;        /* Firefox */
-    -ms-overflow-style: none;     /* old Edge / IE */
   }
 
-  *::-webkit-scrollbar {
-    display: none;                /* Chrome / Safari / WebKit */
+  /* Hide scrollbars only at phone width — i.e. inside the Frontier phone frame
+     (host + Studio preview) and on real phones, where scrolling is overlay/swipe
+     and a persistent desktop bar breaks the illusion. At desktop width (app
+     opened standalone) keep real scrollbars so scroll thumbs stay usable.
+     Scrolling itself always works regardless. */
+  @media (max-width: 480px) {
+    * {
+      scrollbar-width: none;        /* Firefox */
+      -ms-overflow-style: none;     /* old Edge / IE */
+    }
+    *::-webkit-scrollbar {
+      display: none;                /* Chrome / Safari / WebKit */
+    }
   }
 
   html {

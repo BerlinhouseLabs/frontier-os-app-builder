@@ -185,6 +185,13 @@ export class ViteManager {
       this.setStatus('stopped', 'No package.json yet — waiting for scaffold');
       return;
     }
+    // Deps may already be present (installed via the terminal or a finished
+    // scaffold) while the status is stale — just start Vite instead of a
+    // redundant npm install that would rewrite the lockfile.
+    if (this.canStart().ok) {
+      await this.start();
+      return;
+    }
 
     this.setStatus('installing');
     this.stderrBuffer = [];
