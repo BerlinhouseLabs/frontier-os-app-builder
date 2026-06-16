@@ -18,7 +18,7 @@ import { ContextPicker } from './components/ContextPicker';
 export function App() {
   const {
     state, viteStatus, viteError, errors, activities, connected, waiting,
-    reconnectAttempt, reconnectDelay, restartVite, viteLogs, requestViteLogs,
+    reconnectAttempt, reconnectDelay, restartVite, installDeps, viteLogs, requestViteLogs,
     appDir, apps, workspaceRoot, appsLoading, selectApp, backToApps, refreshApps,
     appChangeKey, writeContext, contextWritePending,
   } = useStudio();
@@ -313,6 +313,7 @@ export function App() {
     errors,
     activities,
     onRestartVite: restartVite,
+    onInstallDeps: installDeps,
     onShowLogs: handleShowLogs,
     onBackToApps: backToApps,
   };
@@ -417,6 +418,7 @@ export function App() {
               phone={phone}
               refreshKey={refreshKey}
               errors={errors}
+              onInstallDeps={installDeps}
             />
           </div>
         </main>

@@ -21,6 +21,7 @@ export interface StudioState {
   reconnectAttempt: number;
   reconnectDelay: number;
   restartVite: () => void;
+  installDeps: () => void;
   viteLogs: string[];
   requestViteLogs: () => void;
   // Workspace / app picker
@@ -173,6 +174,12 @@ export function useStudio(): StudioState {
     }
   }, []);
 
+  const installDeps = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'install-deps' }));
+    }
+  }, []);
+
   const requestViteLogs = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'request-vite-logs' }));
@@ -217,6 +224,7 @@ export function useStudio(): StudioState {
     reconnectAttempt,
     reconnectDelay,
     restartVite,
+    installDeps,
     viteLogs,
     requestViteLogs,
     appDir,

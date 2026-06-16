@@ -34,6 +34,7 @@ interface PreviewFrameProps {
   phone: PhoneSize;
   refreshKey: number;
   errors?: ParseError[];
+  onInstallDeps?: () => void;
 }
 
 /**
@@ -123,7 +124,7 @@ function PhoneFrame({ phone, children }: { phone: PhoneSize; children: ReactNode
   return <IphoneFrame phone={phone}>{children}</IphoneFrame>;
 }
 
-export function PreviewFrame({ devPort, viteStatus, viteError, phone, refreshKey, errors = [] }: PreviewFrameProps) {
+export function PreviewFrame({ devPort, viteStatus, viteError, phone, refreshKey, errors = [], onInstallDeps }: PreviewFrameProps) {
   const [dismissed, setDismissed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -168,6 +169,45 @@ export function PreviewFrame({ devPort, viteStatus, viteError, phone, refreshKey
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-2 border-gray-700 border-t-amber-400 rounded-full animate-spin mx-auto" />
           <p className="text-sm text-gray-400">Starting dev server...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (viteStatus === 'installing') {
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-900">
+        <div className="text-center space-y-3 max-w-sm px-4">
+          <div className="w-8 h-8 border-2 border-gray-700 border-t-emerald-400 rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-gray-300">Installing dependencies…</p>
+          <p className="text-xs text-gray-500">First run can take a minute. The preview opens automatically when it's ready.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (viteStatus === 'needs-install') {
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-900">
+        <div className="text-center space-y-4 max-w-xs px-4">
+          <div className="w-12 h-12 rounded-2xl bg-gray-800 flex items-center justify-center mx-auto">
+            <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm text-gray-200 font-medium">This app needs setup</p>
+            <p className="text-xs text-gray-500">Install its dependencies to launch the live preview.</p>
+          </div>
+          {onInstallDeps && (
+            <button
+              onClick={onInstallDeps}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium transition-colors"
+            >
+              Install dependencies
+            </button>
+          )}
+          <p className="text-[11px] text-gray-600">Runs <code className="font-mono text-gray-500">npm install</code> for you — no terminal needed.</p>
         </div>
       </div>
     );

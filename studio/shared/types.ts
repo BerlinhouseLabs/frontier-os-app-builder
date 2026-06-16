@@ -51,7 +51,7 @@ export interface ActivityEvent {
   detail?: string;
 }
 
-export type ViteStatus = 'running' | 'starting' | 'stopped' | 'error';
+export type ViteStatus = 'running' | 'starting' | 'installing' | 'needs-install' | 'stopped' | 'error';
 
 /** Lightweight summary used by the workspace app picker. */
 export interface AppSummary {
