@@ -14,6 +14,7 @@ export interface ViteManagerOptions {
 
 export class ViteManager {
   private process: ChildProcess | null = null;
+  private installProcess: ChildProcess | null = null;
   private startedByUs = false;
   private healthTimer: ReturnType<typeof setInterval> | null = null;
   private appDir: string;
@@ -195,6 +196,7 @@ export class ViteManager {
         detached: false,
         env: { ...process.env, FORCE_COLOR: '0' },
       });
+      this.installProcess = proc;
 
       const capture = (chunk: Buffer) => {
         const lines = chunk.toString().split('\n').filter(l => l.trim());
@@ -207,12 +209,20 @@ export class ViteManager {
       proc.stderr?.on('data', capture);
 
       proc.on('error', (err) => {
+        this.installProcess = null;
         this.setStatus('error', err.message.includes('ENOENT') ? 'npm is not installed' : err.message);
         resolve();
       });
 
       proc.on('exit', (code) => {
-        if (code === 0) {
+        // stop() kills + nulls installProcess on app-swap/teardown. If it's
+        // already null here, this install was cancelled — do NOT start Vite
+        // for an app whose manager has been torn down.
+        const cancelled = this.installProcess === null;
+        this.installProcess = null;
+        if (cancelled) {
+          resolve();
+        } else if (code === 0) {
           // Dependencies are in place — bring the dev server up.
           this.start().finally(() => resolve());
         } else {
@@ -284,6 +294,10 @@ export class ViteManager {
 
   async stop(): Promise<void> {
     this.stopHealthCheck();
+    if (this.installProcess) {
+      this.installProcess.kill('SIGTERM');
+      this.installProcess = null;
+    }
     if (this.process) {
       this.process.kill('SIGTERM');
       this.process = null;

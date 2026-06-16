@@ -213,7 +213,7 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
           await initViteManager(currentState.devPort);
         }
 
-        if (viteManager && currentViteStatus === 'stopped') {
+        if (viteManager && (currentViteStatus === 'stopped' || currentViteStatus === 'needs-install')) {
           const check = viteManager.canStart();
           if (check.ok) {
             await viteManager.start();
