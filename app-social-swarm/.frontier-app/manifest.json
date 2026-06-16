@@ -1,0 +1,28 @@
+{
+  "name": "Social Swarm",
+  "packageName": "app-social-swarm",
+  "description": "An agentic swarm that creates content and social media marketing for Frontier Tower",
+  "sdkVersion": "latest",
+  "devPort": 5186,
+  "modules": ["Wallet", "User", "Storage"],
+  "permissions": [
+    "wallet:getBalance",
+    "wallet:getBalanceFormatted",
+    "wallet:getAddress",
+    "wallet:transferOverallFrontierDollar",
+    "user:getDetails",
+    "user:getProfile",
+    "storage:get",
+    "storage:set",
+    "storage:remove"
+  ],
+  "milestone": "v1",
+  "phases": [
+    { "number": 1, "name": "Scaffold + Standalone Shell", "status": "complete" },
+    { "number": 2, "name": "Campaign + Swarm Core", "status": "complete" },
+    { "number": 3, "name": "Content Management", "status": "complete" },
+    { "number": 4, "name": "Payments + Agent Registry", "status": "complete" },
+    { "number": 5, "name": "SDK Integration", "status": "not-started" }
+  ],
+  "sdkPhase": 5
+}
