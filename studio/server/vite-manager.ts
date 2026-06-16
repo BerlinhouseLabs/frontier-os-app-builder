@@ -3,7 +3,7 @@ import { createConnection } from 'node:net';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-export type ViteStatus = 'running' | 'starting' | 'stopped' | 'error';
+export type ViteStatus = 'running' | 'starting' | 'installing' | 'needs-install' | 'stopped' | 'error';
 
 export interface ViteManagerOptions {
   appDir: string;
@@ -65,7 +65,13 @@ export class ViteManager {
   async start(): Promise<void> {
     const check = this.canStart();
     if (!check.ok) {
-      this.setStatus('stopped', check.reason);
+      // Deps missing (package.json present, node_modules absent) is an actionable
+      // state — surface it as 'needs-install' so the UI can offer a one-click
+      // install. Anything else (no scaffold yet) stays 'stopped'.
+      const depsMissing =
+        existsSync(join(this.appDir, 'package.json')) &&
+        !existsSync(join(this.appDir, 'node_modules'));
+      this.setStatus(depsMissing ? 'needs-install' : 'stopped', check.reason);
       return;
     }
 
@@ -164,6 +170,58 @@ export class ViteManager {
 
     await this.waitForPort(30_000);
     this.startHealthCheck();
+  }
+
+  /**
+   * Install the app's npm dependencies, then start the dev server.
+   * Fire-and-forget from the caller's side — it drives its own status
+   * broadcasts ('installing' → 'running' | 'error'). npm output is captured
+   * into the same buffer as Vite, so the existing "logs" viewer works here too.
+   */
+  async installDeps(): Promise<void> {
+    if (this._status === 'installing') return; // already running — ignore double-clicks
+    if (!existsSync(join(this.appDir, 'package.json'))) {
+      this.setStatus('stopped', 'No package.json yet — waiting for scaffold');
+      return;
+    }
+
+    this.setStatus('installing');
+    this.stderrBuffer = [];
+
+    await new Promise<void>((resolve) => {
+      const proc = spawn('npm', ['install', '--no-audit', '--no-fund'], {
+        cwd: this.appDir,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: false,
+        env: { ...process.env, FORCE_COLOR: '0' },
+      });
+
+      const capture = (chunk: Buffer) => {
+        const lines = chunk.toString().split('\n').filter(l => l.trim());
+        for (const line of lines) {
+          this.stderrBuffer.push(line);
+          if (this.stderrBuffer.length > this.MAX_STDERR_LINES) this.stderrBuffer.shift();
+        }
+      };
+      proc.stdout?.on('data', capture);
+      proc.stderr?.on('data', capture);
+
+      proc.on('error', (err) => {
+        this.setStatus('error', err.message.includes('ENOENT') ? 'npm is not installed' : err.message);
+        resolve();
+      });
+
+      proc.on('exit', (code) => {
+        if (code === 0) {
+          // Dependencies are in place — bring the dev server up.
+          this.start().finally(() => resolve());
+        } else {
+          const tail = this.stderrBuffer.slice(-5).join('\n');
+          this.setStatus('error', tail || `npm install exited with code ${code}`);
+          resolve();
+        }
+      });
+    });
   }
 
   private async waitForPort(timeoutMs: number): Promise<void> {

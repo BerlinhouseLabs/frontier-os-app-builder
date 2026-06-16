@@ -16,11 +16,12 @@ interface SidebarProps {
   errors: ParseError[];
   activities: ActivityEvent[];
   onRestartVite: () => void;
+  onInstallDeps?: () => void;
   onShowLogs?: () => void;
   onBackToApps?: () => void;
 }
 
-export function Sidebar({ state, viteStatus, viteError, errors, activities, onRestartVite, onShowLogs, onBackToApps }: SidebarProps) {
+export function Sidebar({ state, viteStatus, viteError, errors, activities, onRestartVite, onInstallDeps, onShowLogs, onBackToApps }: SidebarProps) {
   const [showActivityFilters, setShowActivityFilters] = useState(false);
 
   return (
@@ -84,7 +85,7 @@ export function Sidebar({ state, viteStatus, viteError, errors, activities, onRe
 
       {/* Footer: Vite status */}
       <div className="px-4 py-3 border-t border-gray-800 shrink-0">
-        <ViteStatusIndicator status={viteStatus} error={viteError} onRestart={onRestartVite} onShowLogs={onShowLogs} />
+        <ViteStatusIndicator status={viteStatus} error={viteError} onRestart={onRestartVite} onInstall={onInstallDeps} onShowLogs={onShowLogs} />
       </div>
     </aside>
   );

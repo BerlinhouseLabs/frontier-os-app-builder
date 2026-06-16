@@ -168,6 +168,8 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
             activity.push({ type: 'vite_event', message: `Dev server error: ${error || 'unknown'}` });
           } else if (status === 'starting') {
             activity.push({ type: 'vite_event', message: 'Starting dev server...' });
+          } else if (status === 'installing') {
+            activity.push({ type: 'vite_event', message: 'Installing dependencies...' });
           }
         }
       },
@@ -384,6 +386,12 @@ export async function startStudio(opts: StudioOptions): Promise<{ close: () => P
         }
         if (msg.type === 'request-vite-logs' && viteManager) {
           ws.send(JSON.stringify({ type: 'vite-logs', lines: viteManager.getBuffer() }));
+        }
+        if (msg.type === 'install-deps' && viteManager) {
+          // Long-running: do NOT await — that would block this client's other
+          // messages (pty-input, resize). installDeps drives its own status
+          // broadcasts ('installing' → 'running' | 'error').
+          viteManager.installDeps().catch(() => { /* status already broadcast */ });
         }
         if (msg.type === 'write-context' && typeof msg.content === 'string') {
           try {
