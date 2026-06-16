@@ -91,9 +91,11 @@ export const TerminalPane = forwardRef<TerminalPaneHandle, TerminalPaneProps>(
         }
       });
 
-      // Open WebSocket
+      // Open WebSocket — must carry the per-session token, same as the dashboard
+      // socket, or the server's verifyClient rejects the upgrade (401).
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${window.location.host}`);
+      const token = window.__STUDIO_TOKEN__ ?? '';
+      const ws = new WebSocket(`${protocol}//${window.location.host}/?token=${token}`);
       wsRef.current = ws;
 
       ws.onopen = () => {
