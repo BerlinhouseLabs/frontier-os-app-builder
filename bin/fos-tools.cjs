@@ -186,8 +186,7 @@ function getLocalPwaMetadata(cwd, opts = {}) {
 
   const appId = opts.appId || getPwaAppId(manifest);
   const appUrl = opts.appUrl || `http://localhost:${devPort}`;
-  const pwaPort = Number(opts.pwaPort || 5173);
-  const pwaUrl = `http://localhost:${pwaPort}`;
+  const pwaUrl = 'http://localhost:5173';
   const sdkIntegrated =
     fs.existsSync(path.join(cwd, 'src', 'lib', 'sdk-context.tsx')) &&
     fs.existsSync(path.join(cwd, 'src', 'lib', 'sdk-services.tsx'));
@@ -200,7 +199,6 @@ function getLocalPwaMetadata(cwd, opts = {}) {
     pwaUrl,
     launchUrl: `${pwaUrl}/apps/${appId}`,
     devPort,
-    pwaPort,
     permissions: Array.isArray(manifest.permissions) ? manifest.permissions : [],
     modules: Array.isArray(manifest.modules) ? manifest.modules : [],
     packageName: manifest.packageName || null,
@@ -318,7 +316,7 @@ function parsePwaLocalOptions(args) {
     else if (arg === '--app-id' && args[i + 1]) opts.appId = args[++i];
     else if (arg === '--app-url' && args[i + 1]) opts.appUrl = args[++i];
     else if (arg === '--dev-port' && args[i + 1]) opts.devPort = args[++i];
-    else if (arg === '--pwa-port' && args[i + 1]) opts.pwaPort = args[++i];
+    else if (arg === '--pwa-port') error('pwa-local does not support --pwa-port; Frontier PWA local testing must use http://localhost:5173.');
   }
   return opts;
 }
@@ -338,8 +336,8 @@ function cmdPwaLocal(cwd, action, args, flags) {
         registryFile,
         registryFound: Boolean(registryFile),
         registryCommand: `node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" pwa-local write${pwaDir ? ` --pwa-dir ${shellQuote(pwaDir)}` : ' --pwa-dir <frontier-pwa-path>'}`,
-        appDevCommand: `npm run dev -- --host 127.0.0.1 --port ${metadata.devPort}`,
-        pwaDevCommand: pwaDir ? `cd ${shellQuote(pwaDir)} && npm run dev` : 'cd <frontier-pwa-path> && npm run dev',
+        appDevCommand: `npm run dev -- --host localhost --port ${metadata.devPort}`,
+        pwaDevCommand: pwaDir ? `cd ${shellQuote(pwaDir)} && npm run dev -- --host localhost --port 5173` : 'cd <frontier-pwa-path> && npm run dev -- --host localhost --port 5173',
       }, flags);
       break;
 
@@ -732,11 +730,20 @@ function cmdValidateStructure(cwd, flags) {
         issues.push('Missing local PWA smoke test report: .frontier-app/PWA-TEST.md (run /fos:test-pwa)');
       } else {
         const pwaTest = readFile(pwaTestPath);
+        const expectedAppId = manifest ? getPwaAppId(manifest) : null;
+        const expectedAppUrl = manifest?.devPort ? `http://localhost:${manifest.devPort}` : null;
+        const expectedLaunchUrl = expectedAppId ? `http://localhost:5173/apps/${expectedAppId}` : null;
         if (!pwaTest.includes('Status: PASS')) {
           issues.push('.frontier-app/PWA-TEST.md missing Status: PASS');
         }
-        if (!/http:\/\/localhost:\d+\/apps\//.test(pwaTest)) {
-          issues.push('.frontier-app/PWA-TEST.md missing local PWA launch URL');
+        if (expectedAppId && !pwaTest.includes(`App ID: ${expectedAppId}`)) {
+          issues.push(`.frontier-app/PWA-TEST.md App ID does not match manifest app ID: ${expectedAppId}`);
+        }
+        if (expectedAppUrl && !pwaTest.includes(`App URL: ${expectedAppUrl}`)) {
+          issues.push(`.frontier-app/PWA-TEST.md App URL does not match manifest dev port: ${expectedAppUrl}`);
+        }
+        if (expectedLaunchUrl && !pwaTest.includes(`Launch URL: ${expectedLaunchUrl}`)) {
+          issues.push(`.frontier-app/PWA-TEST.md Launch URL does not match manifest app ID: ${expectedLaunchUrl}`);
         }
         const requiredPwaChecks = [
           'PWA route did not 404',

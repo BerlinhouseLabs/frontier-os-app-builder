@@ -33,7 +33,6 @@ APP_URL=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1]
 PWA_URL=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(i.pwaUrl)" "$INFO_FILE")
 PWA_DIR=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(i.pwaDir || '')" "$INFO_FILE")
 DEV_PORT=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(i.devPort)" "$INFO_FILE")
-PWA_PORT=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(i.pwaPort)" "$INFO_FILE")
 LAUNCH_URL=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(i.launchUrl)" "$INFO_FILE")
 ```
 
@@ -123,7 +122,7 @@ if curl -fsS "$APP_URL" >/dev/null 2>&1; then
 else
   APP_LOG="/tmp/fos-local-app-$APP_ID.log"
   APP_PID="/tmp/fos-local-app-$APP_ID.pid"
-  npm run dev -- --host 127.0.0.1 --port "$DEV_PORT" > "$APP_LOG" 2>&1 &
+  npm run dev -- --host localhost --port "$DEV_PORT" > "$APP_LOG" 2>&1 &
   echo $! > "$APP_PID"
 fi
 ```
@@ -135,7 +134,7 @@ if curl -fsS "$PWA_URL" >/dev/null 2>&1; then
 else
   PWA_LOG="/tmp/fos-local-pwa-$APP_ID.log"
   PWA_PID="/tmp/fos-local-pwa-$APP_ID.pid"
-  (cd "$PWA_DIR" && npm run dev -- --host 127.0.0.1 --port "$PWA_PORT") > "$PWA_LOG" 2>&1 &
+  (cd "$PWA_DIR" && npm run dev -- --host localhost --port 5173) > "$PWA_LOG" 2>&1 &
   echo $! > "$PWA_PID"
 fi
 ```
