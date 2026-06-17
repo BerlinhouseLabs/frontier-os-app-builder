@@ -23,6 +23,7 @@ Every Frontier OS app ships with these. Non-negotiable.
 - [ ] **PLAT-03**: App uses dark theme matching Frontier OS visual language
 - [ ] **PLAT-04**: All external API calls handle CORS correctly
 - [ ] **PLAT-05**: SdkProvider wraps the entire app, SDK initializes on mount
+- [ ] **PLAT-06**: App loads through the local Frontier PWA at `/apps/<appId>` and SDK bridge calls work in-frame
 
 ### [Feature Category 1]
 
@@ -68,7 +69,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLAT-02 | Phase 1 | Pending |
 | PLAT-03 | Phase 1 | Pending |
 | PLAT-04 | Phase 1 | Pending |
-| PLAT-05 | Phase 1 | Pending |
+| PLAT-05 | SDK Integration | Pending |
+| PLAT-06 | SDK Integration | Pending |
 | REQ-01 | Phase [N] | Pending |
 
 **Coverage:**
@@ -86,8 +88,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 <guidelines>
 
 **Standard Platform Requirements:**
-- PLAT-01 through PLAT-05 are ALWAYS included for every Frontier OS app
-- They always map to Phase 1 (Scaffold + Standalone Shell)
+- PLAT-01 through PLAT-06 are ALWAYS included for every Frontier OS app
+- PLAT-01 through PLAT-04 map to Phase 1 (Scaffold + Standalone Shell)
+- PLAT-05 and PLAT-06 map to the final SDK Integration phase
 - They are non-negotiable — an app without these cannot run in Frontier OS
 
 **Requirement Format:**

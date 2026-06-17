@@ -287,7 +287,7 @@ Access modules via `services.<module>` from `useServices()`. Property names matc
 
 ### SDK Integration Phase Execution
 
-Follow the SDK Integration pattern from app-patterns.md "SDK Integration Pattern" section. The steps are: add SDK dependency; create sdk-context.tsx; create sdk-services.tsx (wire the modules your app uses); swap in templates/app/layout.tsx (it bridges the SDK into FrontierServicesProvider so useServices() works in-frame); swap in the full vercel.json. Leave frontier-services.tsx unchanged — it stays the SDK-free mock seam; do NOT add SDK imports or detection to it. Use templates from templates/app/ for each file.
+Follow the SDK Integration pattern from app-patterns.md "SDK Integration Pattern" section. The steps are: add SDK dependency; create sdk-context.tsx; create sdk-services.tsx (wire the modules your app uses); swap in templates/app/layout.tsx (it bridges the SDK into FrontierServicesProvider so useServices() works in-frame); swap in the full vercel.json. Leave frontier-services.tsx unchanged — it stays the SDK-free mock seam; do NOT add SDK imports or detection to it. Use templates from templates/app/ for each file. After SDK Integration completes, hand off to `/fos:test-pwa` for the local Frontier PWA iframe smoke test.
 
 </sdk_integration_execution>
 

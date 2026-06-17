@@ -152,6 +152,7 @@ Incorporate answers from smart questions to refine the module list. If the user'
 ## App Summary
 
 **Name:** [Inferred from description, or ask]
+**App ID:** [kebab-name used in the Frontier PWA route, e.g. tip-jar]
 **Description:** [From step 2, refined by step 4 answers]
 **Dev Port:** [Pick from 5180-5199 range, avoid common ports]
 
@@ -264,7 +265,7 @@ Write to `.frontier-app/PROJECT.md`.
 node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" scaffold "state/requirements.md" --raw --vars '{"APP_NAME":"[name]","MILESTONE_VERSION":"v1","DATE":"[today]","TRIGGER":"initial creation"}'
 ```
 Then fill in:
-- Standard PLAT-01 through PLAT-05 (always)
+- Standard PLAT-01 through PLAT-06 (always)
 - Feature requirements REQ-01+ (from phases)
 - Traceability table mapping requirements to phases
 - Out of scope (standard 2 + app-specific)
@@ -299,6 +300,7 @@ Construct the manifest object:
 ```json
 {
   "name": "[App Name]",
+  "appId": "[kebab-name]",
   "packageName": "[package-name]",
   "description": "[Description]",
   "sdkVersion": "latest",

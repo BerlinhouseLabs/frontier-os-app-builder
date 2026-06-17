@@ -98,7 +98,7 @@ SDK_PHASE=$(node -e "const m=JSON.parse(require('fs').readFileSync('.frontier-ap
 
 # 4. FOS structure validation
 echo "--- Structure ---"
-node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" validate structure ${SDK_PHASE:+--phase "$SDK_PHASE"}
+node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" validate structure ${SDK_PHASE:+--phase "$SDK_PHASE"} --require-pwa-test
 STRUCT_STATUS=$?
 
 # 5. FOS permissions validation

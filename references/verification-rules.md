@@ -12,6 +12,7 @@ Rules are split into two tiers based on when they apply:
 |------|-------|-------------|
 | **Tier 1 (Design)** | S-01–S-03, T-01–T-05, B-01–B-03, C-02–C-04, M-01–M-03 | After every phase |
 | **Tier 2 (SDK)** | I-01–I-04, C-01, C-05, P-01–P-03 | After SDK Integration phase only |
+| **Pre-ship** | I-05 | Before `/fos:ship` |
 
 To determine the current tier: read `sdkPhase` from `.frontier-app/manifest.json`. If the current phase matches `sdkPhase`, run both Tier 1 and Tier 2. Otherwise, run Tier 1 only. If `sdkPhase` is absent from the manifest, run all checks (backward compatibility).
 
@@ -153,6 +154,16 @@ When inside the Frontier app, the Layout must wrap its children with `<SdkProvid
 - `sdk-context.tsx` exports `useSdk` and `SdkProvider`.
 - `useSdk()` / `SdkProvider` are consumed only by `sdk-services.tsx` and `Layout.tsx`; feature code uses `useServices()` from `../lib/frontier-services` (see M-03), not `useSdk`.
 - No direct `new FrontierSDK()` calls outside of `sdk-context.tsx`.
+
+### I-05: Local Frontier PWA iframe smoke test recorded
+
+Before shipping, `/fos:test-pwa` must be run against a local `frontier-pwa` checkout. It creates or updates the PWA external registry entry for this app and records the live iframe test in `.frontier-app/PWA-TEST.md`.
+
+**Pass condition:**
+- `.frontier-app/PWA-TEST.md` exists.
+- The report contains `Status: PASS`.
+- The report contains a `Launch URL` under `http://localhost:5173/apps/`.
+- The verified checklist includes iframe render, no standalone fallback, no unauthorized-origin error, and at least one SDK-backed read completed in-frame.
 
 ---
 
@@ -443,6 +454,7 @@ Source files under `src/hooks/`, `src/views/`, and `src/components/` must NOT im
 | I-02  | SDK           | createStandaloneHTML() fallback in Layout.tsx        | Tier 2 | Error    |
 | I-03  | SDK           | SdkProvider wrapping children in Layout.tsx          | Tier 2 | Error    |
 | I-04  | SDK           | useSdk() hook available and used                    | Tier 2 | Error    |
+| I-05  | SDK           | Local Frontier PWA iframe smoke test recorded       | Pre-ship | Error  |
 | C-01  | Configuration | vercel.json: CORS + CSP frame-ancestors (3 origins) | Tier 2 | Error    |
 | C-02  | Configuration | tsconfig.json has strict mode and vitest types      | Tier 1 | Error    |
 | C-03  | Configuration | postcss.config.js imports @tailwindcss/postcss      | Tier 1 | Error    |

@@ -47,6 +47,8 @@ npx frontier-os-app-builder --uninstall
 /fos:execute 1                  → build the app + auto-verify
   /clear
   ... repeat for each phase ...
+/fos:test-pwa                   → test inside local Frontier PWA iframe
+  /clear
 /fos:ship                       → deploy to Vercel + register in app store
 ```
 
@@ -68,6 +70,7 @@ npx frontier-os-app-builder --uninstall
 | `/fos:discuss N` | Discuss gray area decisions for phase N |
 | `/fos:plan N` | Research patterns + create execution plans for phase N |
 | `/fos:execute N` | Build phase N with auto-verification |
+| `/fos:test-pwa` | Test the app live inside a local Frontier PWA iframe |
 | `/fos:ship` | Deploy to Vercel and register in Frontier app store |
 | `/fos:new-milestone` | Start a new version (v2, v3...) with additional features |
 | `/fos:add-feature` | Add a feature as a new phase to the current milestone |
@@ -79,6 +82,7 @@ npx frontier-os-app-builder --uninstall
 | Environment variable | Used by | Effect |
 |---|---|---|
 | `FOS_GITHUB_ORG` | `/fos:ship` | Creates the deployed app's GitHub repo under this organization. When unset (the default), the repo is created under your authenticated `gh` user account. |
+| `FRONTIER_PWA_DIR` | `/fos:test-pwa` | Path to a local `frontier-pwa` checkout. When unset, the builder checks common sibling/workspace paths and otherwise asks for `--pwa-dir`. |
 
 ## How it works
 
@@ -97,7 +101,7 @@ Each command reads state from `.frontier-app/` on disk, does its work, writes up
 - **Module inference** — describe your app in plain English and the framework maps it to the right SDK modules ("room booking" → Events + Wallet + User)
 - **Smart questions** — asks domain questions ("Should bookings require FND payment?"), not technical ones ("Which SDK modules?")
 - **Production templates** — boilerplate extracted from real Frontier OS apps, not generated from scratch
-- **Frontier-specific verification** — checks CORS origins, iframe detection, standalone fallback, SDK permissions, dark theme
+- **Frontier-specific verification** — checks CORS origins, iframe detection, standalone fallback, SDK permissions, dark theme, and local PWA iframe loading
 - **Milestones** — iterative development with `/fos:new-milestone` for v2, v3, and beyond
 
 ## Frontier Studio

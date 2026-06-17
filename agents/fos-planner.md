@@ -180,7 +180,7 @@ The SDK Integration phase is ALWAYS the last phase. It is mechanical — no feat
 4. **Leave frontier-services.tsx unchanged** — it stays the SDK-free mock seam. The iframe/standalone switch lives in Layout (step 5); do NOT add SDK imports or detection to `src/lib/frontier-services.tsx`.
 5. **Swap in Layout.tsx** — Copy `templates/app/layout.tsx`: `isInFrontierApp()` detection, `createStandaloneHTML()` fallback, and in-frame wrap `<Outlet />` in `SdkProvider` + bridge the SDK into `FrontierServicesProvider` (`createSdkServices(sdk)`) so `useServices()` resolves.
 6. **Swap in the full vercel.json** — Replace with `templates/app/vercel.json` (CORS + CSP `frame-ancestors` for the 3 origins + security headers).
-7. **Verify** — Build passes (`npm run build`), typecheck passes (`npx tsc --noEmit`), all verification rules pass including Tier 2.
+7. **Verify** — Build passes (`npm run build`), typecheck passes (`npx tsc --noEmit`), all verification rules pass including Tier 2. After this phase, the next command is `/fos:test-pwa`.
 
 **Success criteria (fixed, not user-determined):**
 1. `src/lib/sdk-context.tsx` exists and exports `useSdk` + `SdkProvider`
@@ -190,6 +190,7 @@ The SDK Integration phase is ALWAYS the last phase. It is mechanical — no feat
 5. `vercel.json` has CORS + CSP `frame-ancestors` (3 origins) + security headers
 6. `npm run build` succeeds
 7. `npx tsc --noEmit` passes
+8. The phase handoff points to `/fos:test-pwa` as the required pre-ship iframe test
 
 </phase_types>
 
