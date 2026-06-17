@@ -86,7 +86,7 @@ The command:
 - adds or updates the app in the local PWA registry file `src/lib/apps/registry/apps/external.ts`
 - starts or verifies the generated app at `http://localhost:<devPort>`
 - starts or verifies the PWA at `http://localhost:5173`
-- opens the app route at `http://localhost:5173/apps/<appId>`
+- opens the app route at `http://localhost:<pwaPort>/apps/<appId>` (default PWA port: `5173`)
 - records the result in `.frontier-app/PWA-TEST.md`
 
 If the PWA checkout is not in a common sibling/workspace location, pass it explicitly:

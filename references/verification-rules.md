@@ -162,7 +162,7 @@ Before shipping, `/fos:test-pwa` must be run against a local `frontier-pwa` chec
 **Pass condition:**
 - `.frontier-app/PWA-TEST.md` exists.
 - The report contains `Status: PASS`.
-- The report contains a `Launch URL` under `http://localhost:5173/apps/`.
+- The report contains a `Launch URL` under `http://localhost:<pwaPort>/apps/`.
 - The verified checklist includes iframe render, no standalone fallback, no unauthorized-origin error, and at least one SDK-backed read completed in-frame.
 
 ---

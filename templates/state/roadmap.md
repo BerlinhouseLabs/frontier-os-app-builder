@@ -66,7 +66,7 @@ Plans:
 ### Phase N: SDK Integration
 **Goal**: Wire real Frontier SDK into the standalone app shell
 **Depends on**: All feature phases
-**Requirements**: PLAT-SDK-01, PLAT-06
+**Requirements**: PLAT-05, PLAT-06
 **Success Criteria** (what must be TRUE):
   1. sdk-context.tsx exists and exports useSdk + SdkProvider
   2. sdk-services.tsx maps all service methods to real SDK calls

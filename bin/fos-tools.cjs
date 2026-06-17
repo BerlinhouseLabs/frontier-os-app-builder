@@ -295,7 +295,9 @@ function removeLocalPwaEntry(filePath) {
   const markerPattern = new RegExp(`\\n?\\s*${escapeRegExp(PWA_LOCAL_MARKER_START)}[\\s\\S]*?${escapeRegExp(PWA_LOCAL_MARKER_END)}\\n?`, 'm');
   if (!markerPattern.test(current)) return false;
 
-  const next = current.replace(markerPattern, '\n');
+  const next = current
+    .replace(markerPattern, '\n')
+    .replace(/return\s*\[\s*\];/g, 'return [];');
   writeFile(filePath, next);
   return current !== next;
 }
@@ -725,7 +727,7 @@ function cmdValidateStructure(cwd, flags) {
         if (!pwaTest.includes('Status: PASS')) {
           issues.push('.frontier-app/PWA-TEST.md missing Status: PASS');
         }
-        if (!pwaTest.includes('http://localhost:5173/apps/')) {
+        if (!/http:\/\/localhost:\d+\/apps\//.test(pwaTest)) {
           issues.push('.frontier-app/PWA-TEST.md missing local PWA launch URL');
         }
       }
