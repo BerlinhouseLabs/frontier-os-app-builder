@@ -168,7 +168,7 @@ Verification checklist:
 - Browser console has no `Unauthorized message from` error from `AppHostSDK`.
 - At least one SDK-backed feature can run without hanging. Prefer a cheap read such as Storage, Chain, or User before testing wallet/write flows.
 
-If browser automation is available, open `[launchUrl]`, wait for an iframe under `#frontier-app-iframes`, and check that its `src` starts with `[appUrl]`.
+If browser automation is available, open `[launchUrl]`, wait for an iframe whose `src` starts with `[appUrl]`, and verify it renders in the app route.
 </step>
 
 <step name="completion">

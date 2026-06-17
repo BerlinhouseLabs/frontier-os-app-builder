@@ -738,6 +738,18 @@ function cmdValidateStructure(cwd, flags) {
         if (!/http:\/\/localhost:\d+\/apps\//.test(pwaTest)) {
           issues.push('.frontier-app/PWA-TEST.md missing local PWA launch URL');
         }
+        const requiredPwaChecks = [
+          'PWA route did not 404',
+          'App iframe rendered under Frontier OS app toolbar',
+          'Standalone fallback was not shown in iframe',
+          'No AppHostSDK unauthorized-origin error',
+          'At least one SDK-backed read completed in-frame',
+        ];
+        for (const check of requiredPwaChecks) {
+          if (!pwaTest.includes(check)) {
+            issues.push(`.frontier-app/PWA-TEST.md missing checklist item: ${check}`);
+          }
+        }
       }
     }
   }
