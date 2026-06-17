@@ -233,9 +233,17 @@ function renderPwaAppEntry(metadata) {
 }
 
 function findPwaDir(cwd, explicitDir) {
+  if (explicitDir) {
+    const explicitPath = path.resolve(cwd, explicitDir);
+    return fs.existsSync(path.join(explicitPath, PWA_EXTERNAL_APPS_PATH)) ? explicitPath : null;
+  }
+
+  if (process.env.FRONTIER_PWA_DIR) {
+    const envPath = path.resolve(process.env.FRONTIER_PWA_DIR);
+    return fs.existsSync(path.join(envPath, PWA_EXTERNAL_APPS_PATH)) ? envPath : null;
+  }
+
   const candidates = [];
-  if (explicitDir) candidates.push(path.resolve(cwd, explicitDir));
-  if (process.env.FRONTIER_PWA_DIR) candidates.push(path.resolve(process.env.FRONTIER_PWA_DIR));
 
   const parent = path.dirname(cwd);
   candidates.push(
@@ -770,6 +778,7 @@ function cmdValidateStructure(cwd, flags) {
     checkedFiles: requiredFiles.length,
     tier: isLegacy ? 'legacy' : isTier2 ? 2 : 1
   }, flags);
+  if (issues.length > 0) process.exitCode = 1;
 }
 
 function cmdValidatePermissions(cwd, flags) {
@@ -858,6 +867,7 @@ function cmdValidatePermissions(cwd, flags) {
     missingPermissions: missingPerms,
     tier: isLegacy ? 'legacy' : isTier2 ? 2 : 1
   }, flags);
+  if (issues.length > 0) process.exitCode = 1;
 }
 
 // ── Init (Compound Context Loaders) ──────────
