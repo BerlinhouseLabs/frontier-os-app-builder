@@ -89,7 +89,7 @@ SDK Modules: [Which SDK modules are used in this plan, if any]
   <how-to-verify>Visit http://localhost:{{DEV_PORT}} and verify:
   - [Visual check 1]
   - [Visual check 2]
-  (SDK Integration phase only) Open Frontier OS at localhost:3000 and verify the app loads in the iframe.</how-to-verify>
+  (SDK Integration phase only) Run /fos:test-pwa and verify the app loads at http://localhost:5173/apps/[appId] inside the Frontier PWA iframe.</how-to-verify>
   <resume-signal>Type "approved" or describe issues</resume-signal>
 </task>
 
@@ -100,6 +100,7 @@ Before declaring plan complete:
 - [ ] `npm run build` succeeds with no errors
 - [ ] `npm run dev` starts without errors on port {{DEV_PORT}}
 - [ ] No TypeScript errors (`npx tsc --noEmit`)
+- [ ] SDK Integration phase only: next action is `/fos:test-pwa` for local Frontier PWA iframe testing
 - [ ] [Plan-specific verification]
 </verification>
 

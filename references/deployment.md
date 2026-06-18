@@ -77,6 +77,34 @@ The `isInFrontierApp()` function checks `window.self !== window.top` to detect i
 
 ---
 
+## Local Frontier PWA Testing
+
+Use `/fos:test-pwa` after the SDK Integration phase and before `/fos:ship`.
+
+The command:
+- reads `.frontier-app/manifest.json` for `appId`, `devPort`, and permissions
+- adds or updates the app in the local PWA registry file `src/lib/apps/registry/apps/external.ts`
+- starts or verifies the generated app at `http://localhost:<devPort>`
+- starts or verifies the PWA at `http://localhost:5173`
+- opens the app route at `http://localhost:5173/apps/<appId>`
+- records the result in `.frontier-app/PWA-TEST.md`
+
+If the PWA checkout is not in a common sibling/workspace location, pass it explicitly:
+
+```bash
+/fos:test-pwa --pwa-dir /path/to/frontier-pwa
+```
+
+Or set:
+
+```bash
+export FRONTIER_PWA_DIR=/path/to/frontier-pwa
+```
+
+`/fos:ship` treats `.frontier-app/PWA-TEST.md` with `Status: PASS`, the tested `Git SHA`, the current app ID, the current app dev URL, and the full verification checklist as a required pre-ship gate for standalone-first apps. This catches the integration class that standalone Vite cannot catch: registry ID mismatch, wrong iframe origin or port, missing CSP frame ancestor, stale test reports, and SDK host bridge failures.
+
+---
+
 ## Security Headers
 
 The `vercel.json` above already ships these alongside CORS — every app should keep them:

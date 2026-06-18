@@ -167,7 +167,8 @@ function install() {
   console.log(`    2. Run: /fos:new-app "your app description"`);
   console.log(`    3. Follow the guided workflow\n`);
   console.log(`  Commands: /fos:new-app, /fos:discuss, /fos:plan, /fos:execute,`);
-  console.log(`            /fos:ship, /fos:new-milestone, /fos:add-feature,`);
+  console.log(`            /fos:test-pwa, /fos:ship, /fos:new-milestone,`);
+  console.log(`            /fos:add-feature,`);
   console.log(`            /fos:next, /fos:status\n`);
 }
 

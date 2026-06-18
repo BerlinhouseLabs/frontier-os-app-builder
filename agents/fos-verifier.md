@@ -168,6 +168,21 @@ grep -r "new FrontierSDK" src/ --include="*.ts" --include="*.tsx" | grep -v "sdk
 
 If any file outside `sdk-context.tsx` instantiates `new FrontierSDK()` directly, flag as FAIL.
 
+### I-05: Local Frontier PWA iframe smoke test recorded (pre-ship gate)
+
+```bash
+if test -f .frontier-app/PWA-TEST.md; then
+  grep -q "Status: PASS" .frontier-app/PWA-TEST.md && echo "PASS: local PWA status" || echo "FAIL: local PWA status missing"
+  grep -Eq "^Git SHA: [0-9a-f]{7,40}$" .frontier-app/PWA-TEST.md && echo "PASS: tested git SHA recorded" || echo "FAIL: tested git SHA missing"
+  grep -Eq "Launch URL: http://localhost:5173/apps/" .frontier-app/PWA-TEST.md && echo "PASS: local PWA launch URL" || echo "FAIL: local PWA launch URL missing"
+  grep -q -- "- [x] No AppHostSDK unauthorized-origin error" .frontier-app/PWA-TEST.md && echo "PASS: origin verified" || echo "FAIL: origin verification missing"
+else
+  echo "NEXT STEP: run /fos:test-pwa before /fos:ship"
+fi
+```
+
+This check proves the generated app was tested inside the real local Frontier PWA, not only as a standalone Vite app. During `/fos:execute`, missing I-05 should be reported as the next required step, not as an SDK phase failure. `/fos:ship` enforces I-05 through `validate structure --require-pwa-test`.
+
 ## Step 5: Run Configuration Checks (C-01 through C-05)
 
 ### C-01: vercel.json CORS origins
@@ -456,6 +471,7 @@ gaps: [list of failed check IDs, empty if passed]
 | I-02 | createStandaloneHTML() fallback | PASS/FAIL/SKIP |
 | I-03 | SdkProvider wrapping children | PASS/FAIL/SKIP |
 | I-04 | useSdk() hook used correctly | PASS/FAIL/SKIP |
+| I-05 | Local PWA iframe smoke test | PASS/NEXT STEP/SKIP |
 
 ## Configuration Checks (Tier 1 + Tier 2)
 

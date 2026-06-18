@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 // ─────────────────────────────────────────────
 // FOS Tools — CLI utility for Frontier OS App Builder
@@ -65,6 +65,30 @@ function generateSlug(text) {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 50);
+}
+
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function shellQuote(text) {
+  return `'${String(text).replace(/'/g, `'\\''`)}'`;
+}
+
+function gitOutput(cwd, args) {
+  try {
+    return execFileSync('git', args, {
+      cwd,
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function currentGitSha(cwd) {
+  return gitOutput(cwd, ['rev-parse', 'HEAD']);
 }
 
 // ── YAML Frontmatter Parsing ─────────────────
@@ -149,6 +173,311 @@ function saveManifest(cwd, manifest) {
   writeFile(path.join(fosDir(cwd), 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 }
 
+// ── Local PWA Testing ────────────────────────
+
+const PWA_EXTERNAL_APPS_PATH = path.join('src', 'lib', 'apps', 'registry', 'apps', 'external.ts');
+const PWA_LOCAL_MARKER_START = '/* frontier-os-app-builder:local-app:start */';
+const PWA_LOCAL_MARKER_END = '/* frontier-os-app-builder:local-app:end */';
+
+function getPwaAppId(manifest) {
+  if (manifest.appId) return String(manifest.appId);
+  if (manifest.pwaAppId) return String(manifest.pwaAppId);
+  if (manifest.packageName) {
+    const pkg = String(manifest.packageName);
+    if (pkg.startsWith('frontier-os-app-')) return pkg.replace(/^frontier-os-app-/, '');
+    if (pkg.startsWith('app-')) return pkg.replace(/^app-/, '');
+    return pkg;
+  }
+  return generateSlug(manifest.name || 'frontier-app');
+}
+
+function getLocalPwaMetadata(cwd, opts = {}) {
+  const manifest = loadManifest(cwd);
+  if (!manifest) error('.frontier-app/manifest.json not found');
+
+  const devPort = Number(opts.devPort || manifest.devPort);
+  if (!Number.isInteger(devPort) || devPort <= 0) {
+    error('manifest.devPort must be a positive integer for local PWA testing');
+  }
+
+  const appId = opts.appId || getPwaAppId(manifest);
+  const appUrl = opts.appUrl || `http://localhost:${devPort}`;
+  const pwaUrl = 'http://localhost:5173';
+  const sdkIntegrated =
+    fs.existsSync(path.join(cwd, 'src', 'lib', 'sdk-context.tsx')) &&
+    fs.existsSync(path.join(cwd, 'src', 'lib', 'sdk-services.tsx'));
+
+  return {
+    appId,
+    name: manifest.name || appId,
+    description: manifest.description || 'Local Frontier OS app',
+    appUrl,
+    pwaUrl,
+    launchUrl: `${pwaUrl}/apps/${appId}`,
+    devPort,
+    permissions: Array.isArray(manifest.permissions) ? manifest.permissions : [],
+    modules: Array.isArray(manifest.modules) ? manifest.modules : [],
+    packageName: manifest.packageName || null,
+    sdkPhase: manifest.sdkPhase ?? null,
+    sdkIntegrated,
+  };
+}
+
+function renderPwaAppEntry(metadata) {
+  if (metadata.permissions.length === 0) {
+    error('.frontier-app/manifest.json permissions must list exact SDK permissions before writing a local PWA registry entry');
+  }
+
+  const permissions = metadata.permissions;
+
+  return `{
+  id: ${JSON.stringify(metadata.appId)},
+  name: ${JSON.stringify(metadata.name)},
+  description: ${JSON.stringify(metadata.description)},
+  url: ${JSON.stringify(metadata.appUrl)},
+  icon: '/icons/app-fallback.svg',
+  developer: {
+    name: 'Local Frontier OS App Builder',
+    url: ${JSON.stringify(metadata.pwaUrl)},
+    description: 'Local app loaded through Frontier OS App Builder.',
+  },
+  excludedAppStages: ['production'],
+  permissions: ${JSON.stringify(permissions, null, 2).replace(/\n/g, '\n  ')},
+  permissionDisclaimer:
+    'Local development entry generated from .frontier-app/manifest.json for Frontier OS iframe and SDK testing.',
+} as AppMetadata,`;
+}
+
+function readPwaTestField(content, field) {
+  const match = content.match(new RegExp(`^${escapeRegExp(field)}:\\s*(.+)$`, 'm'));
+  return match ? match[1].trim() : null;
+}
+
+function isPwaRuntimePath(file) {
+  return file.startsWith('src/') ||
+    file.startsWith('public/') ||
+    file === '.frontier-app/manifest.json' ||
+    file === 'index.html' ||
+    file === 'package.json' ||
+    file === 'package-lock.json' ||
+    file === 'pnpm-lock.yaml' ||
+    file === 'yarn.lock' ||
+    file === 'vite.config.ts' ||
+    file === 'vite.config.js' ||
+    file === 'vercel.json' ||
+    file === 'tsconfig.json' ||
+    file === 'postcss.config.js' ||
+    file === 'tailwind.config.js' ||
+    file === 'tailwind.config.ts';
+}
+
+function validatePwaTestGitSha(cwd, testedSha) {
+  const currentSha = currentGitSha(cwd);
+  if (!currentSha) return { pass: true };
+  if (!testedSha) {
+    return { pass: false, issue: 'missing Git SHA' };
+  }
+  if (!/^[0-9a-f]{7,40}$/i.test(testedSha)) {
+    return { pass: false, issue: `has invalid Git SHA: ${testedSha}` };
+  }
+
+  const testedCommit = gitOutput(cwd, ['rev-parse', `${testedSha}^{commit}`]);
+  if (!testedCommit) {
+    return { pass: false, issue: `Git SHA is not in this repository: ${testedSha}` };
+  }
+  if (testedCommit === currentSha) {
+    const dirtyRuntimeFiles = getDirtyRuntimeFiles(cwd);
+    if (dirtyRuntimeFiles.length > 0) {
+      return {
+        pass: false,
+        issue: `is stale; uncommitted runtime files changed after the PWA test: ${dirtyRuntimeFiles.join(', ')}`
+      };
+    }
+    return { pass: true };
+  }
+
+  const diff = gitOutput(cwd, ['diff', '--relative', '--name-only', `${testedCommit}..HEAD`]);
+  if (diff == null) {
+    return { pass: false, issue: `could not compare tested Git SHA to HEAD: ${testedSha}` };
+  }
+  const changedRuntimeFiles = diff.split('\n').filter(Boolean).filter(isPwaRuntimePath);
+  if (changedRuntimeFiles.length === 0) {
+    const dirtyRuntimeFiles = getDirtyRuntimeFiles(cwd);
+    if (dirtyRuntimeFiles.length > 0) {
+      return {
+        pass: false,
+        issue: `is stale; uncommitted runtime files changed after the PWA test: ${dirtyRuntimeFiles.join(', ')}`
+      };
+    }
+    return { pass: true };
+  }
+
+  return {
+    pass: false,
+    issue: `is stale; runtime files changed since tested Git SHA ${testedSha}: ${changedRuntimeFiles.join(', ')}`
+  };
+}
+
+function getDirtyRuntimeFiles(cwd) {
+  const changed = new Set();
+  for (const args of [
+    ['diff', '--relative', '--name-only'],
+    ['diff', '--relative', '--cached', '--name-only'],
+    ['ls-files', '--others', '--exclude-standard']
+  ]) {
+    const diff = gitOutput(cwd, args);
+    if (diff) {
+      diff.split('\n').filter(Boolean).forEach(file => changed.add(file));
+    }
+  }
+  return Array.from(changed).filter(isPwaRuntimePath);
+}
+
+function findPwaDir(cwd, explicitDir) {
+  if (explicitDir) {
+    const explicitPath = path.resolve(cwd, explicitDir);
+    return fs.existsSync(path.join(explicitPath, PWA_EXTERNAL_APPS_PATH)) ? explicitPath : null;
+  }
+
+  if (process.env.FRONTIER_PWA_DIR) {
+    const envPath = path.resolve(process.env.FRONTIER_PWA_DIR);
+    return fs.existsSync(path.join(envPath, PWA_EXTERNAL_APPS_PATH)) ? envPath : null;
+  }
+
+  const candidates = [];
+
+  const parent = path.dirname(cwd);
+  candidates.push(
+    path.join(parent, 'frontier-pwa'),
+    path.join(path.dirname(parent), 'frontier-pwa'),
+    path.join(require('os').homedir(), 'work', 'frontieros', 'frontier-pwa'),
+    path.join(require('os').homedir(), 'frontieros', 'frontier-pwa')
+  );
+
+  const seen = new Set();
+  for (const candidate of candidates) {
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
+    if (fs.existsSync(path.join(candidate, PWA_EXTERNAL_APPS_PATH))) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function pwaExternalAppsFile(pwaDir) {
+  return path.join(pwaDir, PWA_EXTERNAL_APPS_PATH);
+}
+
+function indentBlock(block, spaces) {
+  const pad = ' '.repeat(spaces);
+  return block.split('\n').map(line => (line ? pad + line : line)).join('\n');
+}
+
+function upsertLocalPwaEntry(filePath, entry) {
+  const current = readFile(filePath);
+  if (current == null) error(`PWA external registry file not found: ${filePath}`);
+
+  const managedBlock = indentBlock(`${PWA_LOCAL_MARKER_START}\n${entry}\n${PWA_LOCAL_MARKER_END}`, 4);
+  const markerPattern = new RegExp(`\\n?\\s*${escapeRegExp(PWA_LOCAL_MARKER_START)}[\\s\\S]*?${escapeRegExp(PWA_LOCAL_MARKER_END)}\\n?`, 'm');
+
+  let next;
+  if (markerPattern.test(current)) {
+    next = current.replace(markerPattern, `\n${managedBlock}\n`);
+  } else if (/return\s*\[\s*\];/.test(current)) {
+    next = current.replace(/return\s*\[\s*\];/, `return [\n${managedBlock}\n  ];`);
+  } else if (/return\s*\[/.test(current)) {
+    next = current.replace(/return\s*\[/, `return [\n${managedBlock}\n`);
+  } else {
+    error(`Could not patch ${filePath}: expected a getApps() return array`);
+  }
+
+  writeFile(filePath, next);
+  return current !== next;
+}
+
+function removeLocalPwaEntry(filePath) {
+  const current = readFile(filePath);
+  if (current == null) error(`PWA external registry file not found: ${filePath}`);
+
+  const markerPattern = new RegExp(`\\n?\\s*${escapeRegExp(PWA_LOCAL_MARKER_START)}[\\s\\S]*?${escapeRegExp(PWA_LOCAL_MARKER_END)}\\n?`, 'm');
+  if (!markerPattern.test(current)) return false;
+
+  const next = current
+    .replace(markerPattern, '\n')
+    .replace(/return\s*\[\s*\];/g, 'return [];');
+  writeFile(filePath, next);
+  return current !== next;
+}
+
+function parsePwaLocalOptions(args) {
+  const opts = {};
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--pwa-dir' && args[i + 1]) opts.pwaDir = args[++i];
+    else if (arg === '--app-id' && args[i + 1]) opts.appId = args[++i];
+    else if (arg === '--app-url' && args[i + 1]) opts.appUrl = args[++i];
+    else if (arg === '--dev-port' && args[i + 1]) opts.devPort = args[++i];
+    else if (arg === '--pwa-port') error('pwa-local does not support --pwa-port; Frontier PWA local testing must use http://localhost:5173.');
+  }
+  return opts;
+}
+
+function cmdPwaLocal(cwd, action, args, flags) {
+  const opts = parsePwaLocalOptions(args);
+  const subcommand = action || 'info';
+  const pwaDir = findPwaDir(cwd, opts.pwaDir);
+  const registryFile = pwaDir ? pwaExternalAppsFile(pwaDir) : null;
+
+  if (subcommand === 'restore') {
+    if (!registryFile) {
+      error('Could not find frontier-pwa. Pass --pwa-dir <path> or set FRONTIER_PWA_DIR.');
+    }
+    const changed = removeLocalPwaEntry(registryFile);
+    output({ changed, registryFile }, flags);
+    return;
+  }
+
+  const metadata = getLocalPwaMetadata(cwd, opts);
+
+  switch (subcommand) {
+    case 'info':
+      output({
+        ...metadata,
+        pwaDir,
+        registryFile,
+        registryFound: Boolean(registryFile),
+        registryCommand: `node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" pwa-local write${pwaDir ? ` --pwa-dir ${shellQuote(pwaDir)}` : ' --pwa-dir <frontier-pwa-path>'}`,
+        appDevCommand: `npm run dev -- --host localhost --port ${metadata.devPort}`,
+        pwaDevCommand: pwaDir ? `cd ${shellQuote(pwaDir)} && npm run dev -- --host localhost --port 5173` : 'cd <frontier-pwa-path> && npm run dev -- --host localhost --port 5173',
+      }, flags);
+      break;
+
+    case 'snippet':
+      output(flags.raw ? renderPwaAppEntry(metadata) : { entry: renderPwaAppEntry(metadata) }, flags);
+      break;
+
+    case 'write': {
+      const entry = renderPwaAppEntry(metadata);
+      if (!registryFile) {
+        error('Could not find frontier-pwa. Pass --pwa-dir <path> or set FRONTIER_PWA_DIR.');
+      }
+      const changed = upsertLocalPwaEntry(registryFile, entry);
+      output({
+        changed,
+        appId: metadata.appId,
+        appUrl: metadata.appUrl,
+        launchUrl: metadata.launchUrl,
+        registryFile,
+      }, flags);
+      break;
+    }
+
+    default:
+      error('Unknown pwa-local subcommand. Valid: info, snippet, write, restore');
+  }
+}
 // ── State ────────────────────────────────────
 
 function loadState(cwd) {
@@ -498,6 +827,51 @@ function cmdValidateStructure(cwd, flags) {
         issues.push('Layout.tsx missing FrontierServicesProvider bridge (useServices() will crash at runtime)');
       }
     }
+
+    if ((isTier2 || isLegacy) && flags.requirePwaTest && !flags.skipPwaTest) {
+      const pwaTestPath = path.join(cwd, '.frontier-app', 'PWA-TEST.md');
+      if (!fs.existsSync(pwaTestPath)) {
+        issues.push('Missing local PWA smoke test report: .frontier-app/PWA-TEST.md (run /fos:test-pwa)');
+      } else {
+        const pwaTest = readFile(pwaTestPath);
+        const expectedAppId = manifest ? getPwaAppId(manifest) : null;
+        const expectedAppUrl = manifest?.devPort ? `http://localhost:${manifest.devPort}` : null;
+        const expectedLaunchUrl = expectedAppId ? `http://localhost:5173/apps/${expectedAppId}` : null;
+        const reportedStatus = readPwaTestField(pwaTest, 'Status');
+        const reportedAppId = readPwaTestField(pwaTest, 'App ID');
+        const reportedAppUrl = readPwaTestField(pwaTest, 'App URL');
+        const reportedLaunchUrl = readPwaTestField(pwaTest, 'Launch URL');
+        const testedGitSha = readPwaTestField(pwaTest, 'Git SHA');
+        const gitFreshness = validatePwaTestGitSha(cwd, testedGitSha);
+        if (reportedStatus !== 'PASS') {
+          issues.push('.frontier-app/PWA-TEST.md missing Status: PASS');
+        }
+        if (expectedAppId && reportedAppId !== expectedAppId) {
+          issues.push(`.frontier-app/PWA-TEST.md App ID does not match manifest app ID: ${expectedAppId}`);
+        }
+        if (expectedAppUrl && reportedAppUrl !== expectedAppUrl) {
+          issues.push(`.frontier-app/PWA-TEST.md App URL does not match manifest dev port: ${expectedAppUrl}`);
+        }
+        if (expectedLaunchUrl && reportedLaunchUrl !== expectedLaunchUrl) {
+          issues.push(`.frontier-app/PWA-TEST.md Launch URL does not match manifest app ID: ${expectedLaunchUrl}`);
+        }
+        if (!gitFreshness.pass) {
+          issues.push(`.frontier-app/PWA-TEST.md ${gitFreshness.issue}`);
+        }
+        const requiredPwaChecks = [
+          'PWA route did not 404',
+          'App iframe rendered under Frontier OS app toolbar',
+          'Standalone fallback was not shown in iframe',
+          'No AppHostSDK unauthorized-origin error',
+          'At least one SDK-backed read completed in-frame',
+        ];
+        for (const check of requiredPwaChecks) {
+          if (!pwaTest.includes(`- [x] ${check}`)) {
+            issues.push(`.frontier-app/PWA-TEST.md missing checked checklist item: ${check}`);
+          }
+        }
+      }
+    }
   }
 
   // Mock layer checks — Tier 1 only (non-legacy apps)
@@ -536,6 +910,7 @@ function cmdValidateStructure(cwd, flags) {
     checkedFiles: requiredFiles.length,
     tier: isLegacy ? 'legacy' : isTier2 ? 2 : 1
   }, flags);
+  if (issues.length > 0) process.exitCode = 1;
 }
 
 function cmdValidatePermissions(cwd, flags) {
@@ -624,6 +999,7 @@ function cmdValidatePermissions(cwd, flags) {
     missingPermissions: missingPerms,
     tier: isLegacy ? 'legacy' : isTier2 ? 2 : 1
   }, flags);
+  if (issues.length > 0) process.exitCode = 1;
 }
 
 // ── Init (Compound Context Loaders) ──────────
@@ -779,7 +1155,7 @@ function cmdCommit(message, files, flags) {
 
 function main() {
   const args = process.argv.slice(2);
-  const flags = { raw: false, pick: null, phase: null };
+  const flags = { raw: false, pick: null, phase: null, skipPwaTest: false, requirePwaTest: false };
 
   // Extract flags
   const cleanArgs = [];
@@ -787,13 +1163,15 @@ function main() {
     if (args[i] === '--raw') { flags.raw = true; }
     else if (args[i] === '--pick' && args[i + 1]) { flags.pick = args[++i]; }
     else if (args[i] === '--phase' && args[i + 1]) { flags.phase = args[++i]; }
+    else if (args[i] === '--skip-pwa-test') { flags.skipPwaTest = true; }
+    else if (args[i] === '--require-pwa-test') { flags.requirePwaTest = true; }
     else { cleanArgs.push(args[i]); }
   }
 
   const [command, ...rest] = cleanArgs;
 
   if (!command || command === 'help') {
-    console.log(`FOS Tools v${VERSION} — Frontier OS App Builder CLI
+  console.log(`FOS Tools v${VERSION} — Frontier OS App Builder CLI
 
 Usage: node fos-tools.cjs <command> [args] [--raw] [--pick <field>]
 
@@ -808,6 +1186,10 @@ Commands:
   infer-modules "<description>"    Map description to SDK modules
   validate structure               Check app structure matches spec
   validate permissions             Check permissions match SDK usage
+  pwa-local info                   Show local Frontier PWA test metadata
+  pwa-local snippet                Print AppMetadata registry entry
+  pwa-local write                  Add/update current app in PWA external registry
+  pwa-local restore                Remove builder-managed PWA registry entry
   commit "<message>" [--files ...] Git add + commit helper
   version                          Show version
 `);
@@ -856,6 +1238,10 @@ Commands:
         case 'permissions': cmdValidatePermissions(cwd, flags); break;
         default: error('Unknown validate subcommand. Valid: structure, permissions');
       }
+      break;
+
+    case 'pwa-local':
+      cmdPwaLocal(cwd, rest[0], rest.slice(1), flags);
       break;
 
     case 'commit': {

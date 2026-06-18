@@ -602,6 +602,7 @@ The final phase of every app wires the real Frontier SDK in. This is a mechanica
 4. **Leave `src/lib/frontier-services.tsx` unchanged**: it stays the SDK-free mock seam. The iframe/standalone switch happens in Layout (step 5) — do NOT add SDK imports or detection here.
 5. **Swap in `src/views/Layout.tsx`** (from `templates/app/layout.tsx`): `isInFrontierApp()` detection + standalone fallback; in-frame it wraps the app in `SdkProvider` AND bridges the SDK into `FrontierServicesProvider` (via `createSdkServices(sdk)`) so `useServices()` resolves against the real SDK
 6. **Swap in the full `vercel.json`**: CORS for the production origin + `Content-Security-Policy: frame-ancestors` listing the 3 live origins (`os.frontiertower.io`, `sandbox.os.frontiertower.io`, `localhost:5173`) + security headers
+7. **Run `/fos:test-pwa`**: register the current app in the local PWA external registry and open `http://localhost:5173/apps/<appId>` to prove iframe + SDK bridge integration against the real Frontier host.
 
 After SDK Integration, the app works in both modes:
 - **Standalone** (browser): Uses mock services, shows development data

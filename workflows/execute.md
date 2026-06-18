@@ -443,8 +443,13 @@ if [ "$PHASE" -lt "$TOTAL_PHASES" ]; then
     node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update status "ready-to-discuss"
   fi
 else
-  node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update next_action "/fos:ship"
-  node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update status "milestone-complete"
+  if [ "$PHASE" -eq "$SDK_PHASE" ]; then
+    node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update next_action "/fos:test-pwa"
+    node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update status "ready-to-test"
+  else
+    node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update next_action "/fos:ship"
+    node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update status "milestone-complete"
+  fi
 fi
 ```
 
@@ -484,7 +489,7 @@ Plans completed:
 [If completed phase was the SDK Integration phase (sdkPhase from manifest.json):]
 ────────────────────────────────────────
 SDK Integration complete. App is now Frontier OS-ready.
-Next up: `/fos:ship` — Deploy to Vercel and register in the Frontier app store.
+Next up: `/fos:test-pwa` — Test in the local Frontier PWA iframe before shipping.
 
 Run `/clear` first to free your context window.
 ────────────────────────────────────────

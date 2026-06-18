@@ -25,7 +25,7 @@ What makes this app worth building and what does the finished product look like?
 ### Phase 1: Scaffold + Standalone Shell
 **Goal**: Working app shell running standalone in browser with mock data
 **Depends on**: Nothing (always first)
-**Requirements**: PLAT-01, PLAT-02, PLAT-03, PLAT-04, PLAT-05
+**Requirements**: PLAT-01, PLAT-02, PLAT-03, PLAT-04
 **Success Criteria** (what must be TRUE):
   1. App renders standalone in browser with mock data
   2. Dark theme applied — no white backgrounds, no light-mode artifacts
@@ -66,14 +66,15 @@ Plans:
 ### Phase N: SDK Integration
 **Goal**: Wire real Frontier SDK into the standalone app shell
 **Depends on**: All feature phases
-**Requirements**: PLAT-SDK-01
+**Requirements**: PLAT-05, PLAT-06
 **Success Criteria** (what must be TRUE):
   1. sdk-context.tsx exists and exports useSdk + SdkProvider
   2. sdk-services.tsx maps all service methods to real SDK calls
   3. Layout.tsx has isInFrontierApp() detection and SdkProvider wrapping
   4. vercel.json has CORS + CSP frame-ancestors (3 origins) + security headers
-  5. App works both standalone (mocks) and in iframe (real SDK)
-  6. npm run build succeeds
+  5. App has stable `appId`, `devPort`, and permissions metadata for `/fos:test-pwa`
+  6. App works standalone and is ready for the local Frontier PWA iframe smoke test
+  7. npm run build succeeds
 **Plans**: 1 plan (mechanical)
 
 Plans:
@@ -99,7 +100,7 @@ Plans:
 
 **Phase 1 is always the same:**
 - "Scaffold + Standalone Shell" — never skip, never rename
-- Covers all PLAT-* requirements
+- Covers PLAT-01 through PLAT-04
 - Always 1 plan (the scaffold is well-defined)
 - Success criteria are standardized (see template)
 - Uses standalone templates from `templates/app/` directory (frontier-services.tsx, layout-standalone.tsx, package-standalone.json, vercel-standalone.json)
@@ -108,6 +109,7 @@ Plans:
 - Auto-added as the last phase — never skip, never rename
 - Always 1 plan (mechanical, no user decisions)
 - Wires real SDK: adds dependency, creates adapter, upgrades Layout, adds CORS
+- Hands off to `/fos:test-pwa` to prove real host integration against the local Frontier PWA before shipping
 - Fixed success criteria (see template)
 
 **Phase structure:**

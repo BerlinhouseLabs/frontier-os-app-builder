@@ -361,6 +361,7 @@ issue:
 5. Plan includes task to swap in `src/views/Layout.tsx` from the template (iframe detection + `SdkProvider` + `FrontierServicesProvider` bridge so `useServices()` resolves)
 6. Plan includes task to add CORS origins to `vercel.json`
 7. Plan includes verification task (build, typecheck, full validation)
+8. Plan notes `/fos:test-pwa` as the required next command before shipping
 
 **Severity:** blocker for any missing step — SDK Integration is standardized and every step is required.
 

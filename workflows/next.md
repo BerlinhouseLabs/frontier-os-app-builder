@@ -95,24 +95,27 @@ fi
 1. **Status is "shipped" or "milestone-complete":**
    -> Suggest `/fos:new-milestone` or `/fos:add-feature`
 
-2. **Phase directory doesn't exist:**
+2. **Status is "ready-to-test" OR next_action is `/fos:test-pwa`:**
+   -> Suggest `/fos:test-pwa`
+
+3. **Phase directory doesn't exist:**
    -> Suggest `/fos:discuss $CURRENT_PHASE` (need to start from scratch)
 
-3. **No CONTEXT.md (and phase > 1):**
+4. **No CONTEXT.md (and phase > 1):**
    -> Suggest `/fos:discuss $CURRENT_PHASE`
 
-4. **No PLAN.md files:**
+5. **No PLAN.md files:**
    -> Suggest `/fos:plan $CURRENT_PHASE`
 
-5. **Plans exist but not all have SUMMARY.md (incomplete execution):**
+6. **Plans exist but not all have SUMMARY.md (incomplete execution):**
    -> Suggest `/fos:execute $CURRENT_PHASE`
 
-6. **All plans have SUMMARY.md (phase complete):**
+7. **All plans have SUMMARY.md (phase complete):**
    -> Check if more phases exist in ROADMAP.md
    -> If yes: Advance to next phase, suggest `/fos:discuss $NEXT_PHASE`
    -> If no: Suggest `/fos:ship`
 
-7. **Fallback — use STATE.md next_action field:**
+8. **Fallback — use STATE.md next_action field:**
    -> Trust the last workflow's suggestion
 </step>
 
