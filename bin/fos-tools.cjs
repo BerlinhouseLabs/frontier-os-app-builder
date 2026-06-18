@@ -547,14 +547,14 @@ function cmdFindPhase(cwd, phaseNum, flags) {
 function listPlans(phaseDir) {
   if (!phaseDir || !fs.existsSync(phaseDir)) return [];
   return fs.readdirSync(phaseDir)
-    .filter(f => f.match(/^\d{2}-\d{2}-PLAN\.md$/))
+    .filter(f => f.match(/^\d{2,}-\d{2,}-PLAN\.md$/))
     .sort();
 }
 
 function listSummaries(phaseDir) {
   if (!phaseDir || !fs.existsSync(phaseDir)) return [];
   return fs.readdirSync(phaseDir)
-    .filter(f => f.match(/^\d{2}-\d{2}-SUMMARY\.md$/))
+    .filter(f => f.match(/^\d{2,}-\d{2,}-SUMMARY\.md$/))
     .sort();
 }
 
@@ -617,6 +617,13 @@ function ensurePhaseDir(cwd, number, slug) {
 function renumberPhaseDir(cwd, fromNum, toNum) {
   const dir = findPhaseDir(cwd, fromNum);
   if (!dir) return;
+  // Refuse to renumber onto a number already occupied on disk (manifest/filesystem
+  // drift) — renaming would clobber or produce ambiguous ordering. Normal shifts run
+  // highest-first so the destination is always vacant; a hit here means real drift.
+  const occupied = findPhaseDir(cwd, toNum);
+  if (occupied) {
+    error(`Cannot renumber phase ${fromNum} -> ${toNum}: phases/${path.basename(occupied)} already occupies number ${toNum} (manifest/filesystem drift). Reconcile phase dirs before adding phases.`);
+  }
   const m = path.basename(dir).match(/^\d+-(.+)$/);
   const slug = m ? m[1] : '';
   const oldPrefix = String(fromNum).padStart(2, '0');
@@ -673,10 +680,19 @@ function cmdAddPhases(cwd, args, flags) {
   manifest.permissions = [...existingPerms, ...newPermissions];
 
   // Locate the SDK Integration phase and decide whether it has already executed.
+  // Resolve by sdkPhase FIRST — there can be more than one phase named "SDK
+  // Integration" (an executed historical one + a fresh pending one), and sdkPhase
+  // is the source of truth for which is operative. Fall back to the highest-
+  // numbered "SDK Integration" only when sdkPhase is absent.
   const sdkPhaseNum = Number.isInteger(manifest.sdkPhase) ? manifest.sdkPhase : null;
-  const sdkEntry = manifest.phases.find(p =>
-    p.name === 'SDK Integration' || (sdkPhaseNum != null && p.number === sdkPhaseNum)
-  ) || null;
+  let sdkEntry = sdkPhaseNum != null
+    ? (manifest.phases.find(p => p.number === sdkPhaseNum) || null)
+    : null;
+  if (!sdkEntry) {
+    sdkEntry = manifest.phases
+      .filter(p => p.name === 'SDK Integration')
+      .sort((a, b) => b.number - a.number)[0] || null;
+  }
   let sdkExecuted = false;
   if (sdkEntry) {
     const dir = findPhaseDir(cwd, sdkEntry.number);

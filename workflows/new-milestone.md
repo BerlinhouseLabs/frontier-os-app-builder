@@ -176,8 +176,9 @@ If AskUserQuestion denied: display the plan and proceed with "Looks good".
 Pass every new phase name (in order) plus the inferred modules/permissions. `add-phases` merges the new modules/permissions into `manifest.json`, appends the feature phases at the end, and — when any new module is introduced — appends a fresh **SDK Integration** phase last with `sdkPhase` pointing at it. It also creates the phase directories. (The prior milestone's SDK Integration phase is already executed, so this is always the append case.)
 
 ```bash
-# JSON array of the new phase names, in order — e.g. ["Profiles","Messaging"]
-NAMES_JSON='["[Feature 1]","[Feature 2]"]'
+# JSON array of the new phase names, in order. Build it with JSON.stringify
+# (pass each phase name as a separate argument) so quotes/spaces are safe:
+NAMES_JSON=$(node -e 'process.stdout.write(JSON.stringify(process.argv.slice(1)))' "[Feature 1]" "[Feature 2]")
 ADD=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" add-phases \
   --names "$NAMES_JSON" \
   --modules "$INFERRED_MODULES" \

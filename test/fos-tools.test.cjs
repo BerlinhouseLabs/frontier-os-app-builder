@@ -209,3 +209,63 @@ test('new-milestone shape: multiple feature phases then one trailing SDK Integra
   // ordering preserved
   assert.deepStrictEqual(m.phases.map(p => p.number), [1, 2, 3, 4, 5]);
 });
+
+test('two SDK Integration entries: selection respects sdkPhase, not first-by-name (regression)', () => {
+  // Simulates a SECOND add-feature: a prior add already appended a fresh *pending*
+  // SDK Integration (#5) after the executed v1 one (#3); sdkPhase points to #5.
+  const cwd = setup(
+    {
+      modules: ['Storage', 'Chain', 'Events'],
+      permissions: [],
+      phases: [
+        { number: 1, name: 'Scaffold + Standalone Shell', status: 'not-started' },
+        { number: 2, name: 'Tip Flow', status: 'not-started' },
+        { number: 3, name: 'SDK Integration', status: 'not-started' }, // executed (v1)
+        { number: 4, name: 'Leaderboard', status: 'not-started' },
+        { number: 5, name: 'SDK Integration', status: 'not-started' }, // pending (prior add)
+      ],
+      sdkPhase: 5,
+    },
+    [
+      { name: '03-sdk-integration', files: ['03-01-SUMMARY.md'] }, // executed
+      { name: '05-sdk-integration' },                              // pending (no summary)
+    ]
+  );
+
+  const out = runJson(cwd, ['add-phases', '--names', '["Profiles"]', '--modules', 'User']);
+  const m = readManifest(cwd);
+
+  // Must pick the PENDING #5 (per sdkPhase) and insert before it — NOT pick the
+  // executed #3 by name and append a THIRD SDK Integration.
+  assert.strictEqual(out.featurePhases[0].number, 5, 'feature inserted at the pending SDK slot');
+  assert.strictEqual(out.sdkIntegration.renumbered, true);
+  assert.strictEqual(out.sdkIntegration.added, false);
+  assert.strictEqual(out.sdkIntegration.number, 6);
+  assert.strictEqual(out.sdkPhase, 6);
+  assert.strictEqual(m.sdkPhase, 6);
+  assert.strictEqual(m.phases.filter(p => p.name === 'SDK Integration').length, 2,
+    'no third SDK Integration phase created');
+  assert.deepStrictEqual(m.phases.map(p => p.number), [1, 2, 3, 4, 5, 6]);
+});
+
+test('listSummaries/executed-detection works for phase numbers >= 100', () => {
+  const cwd = setup(
+    {
+      modules: ['Storage'],
+      permissions: [],
+      phases: [
+        { number: 99, name: 'Feature', status: 'not-started' },
+        { number: 100, name: 'SDK Integration', status: 'not-started' },
+      ],
+      sdkPhase: 100,
+    },
+    [{ name: '100-sdk-integration', files: ['100-01-SUMMARY.md'] }] // executed, 3-digit prefix
+  );
+
+  // 100 is executed -> new module must APPEND a fresh SDK Integration (Case 2), not renumber.
+  const out = runJson(cwd, ['add-phases', '--names', '["More"]', '--modules', 'Wallet']);
+  assert.strictEqual(out.sdkIntegration.added, true);
+  assert.strictEqual(out.featurePhases[0].number, 101);
+  assert.strictEqual(out.sdkIntegration.number, 102);
+  assert.strictEqual(out.sdkPhase, 102);
+});
