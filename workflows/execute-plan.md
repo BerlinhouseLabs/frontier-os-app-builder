@@ -192,10 +192,12 @@ the single writer of STATE.md: it marks `executing` before the wave and writes t
 authoritative status + body once after the whole wave verifies. Do NOT run `state update`.
 
 ```bash
-# Stage the PHASE DIR only (NOT .frontier-app/). STATE.md lives at .frontier-app/STATE.md —
-# outside $PHASE_DIR — so a stray edit to it can never be staged or committed here. The
-# orchestrator is the sole STATE.md writer.
-git add "$PHASE_DIR"
+# Stage only THIS phase's dir with a RELATIVE pathspec so it resolves inside the executor's
+# worktree — an absolute $PHASE_DIR (it comes from the orchestrator checkout) would make
+# `git add` fail outside the worktree. basename keeps just "NN-slug". STATE.md lives at
+# .frontier-app/STATE.md (outside phases/), so it can never ride along; the orchestrator is
+# the sole STATE.md writer.
+git add ".frontier-app/phases/$(basename "$PHASE_DIR")/"
 git commit -m "docs: Plan $PHASE-$PLAN summary — [one-liner from summary]"
 ```
 </step>
