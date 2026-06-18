@@ -323,12 +323,22 @@ function parsePwaLocalOptions(args) {
 
 function cmdPwaLocal(cwd, action, args, flags) {
   const opts = parsePwaLocalOptions(args);
-  const metadata = getLocalPwaMetadata(cwd, opts);
+  const subcommand = action || 'info';
   const pwaDir = findPwaDir(cwd, opts.pwaDir);
   const registryFile = pwaDir ? pwaExternalAppsFile(pwaDir) : null;
-  const entry = renderPwaAppEntry(metadata);
 
-  switch (action || 'info') {
+  if (subcommand === 'restore') {
+    if (!registryFile) {
+      error('Could not find frontier-pwa. Pass --pwa-dir <path> or set FRONTIER_PWA_DIR.');
+    }
+    const changed = removeLocalPwaEntry(registryFile);
+    output({ changed, registryFile }, flags);
+    return;
+  }
+
+  const metadata = getLocalPwaMetadata(cwd, opts);
+
+  switch (subcommand) {
     case 'info':
       output({
         ...metadata,
@@ -342,10 +352,11 @@ function cmdPwaLocal(cwd, action, args, flags) {
       break;
 
     case 'snippet':
-      output(flags.raw ? entry : { entry }, flags);
+      output(flags.raw ? renderPwaAppEntry(metadata) : { entry: renderPwaAppEntry(metadata) }, flags);
       break;
 
     case 'write': {
+      const entry = renderPwaAppEntry(metadata);
       if (!registryFile) {
         error('Could not find frontier-pwa. Pass --pwa-dir <path> or set FRONTIER_PWA_DIR.');
       }
@@ -360,20 +371,10 @@ function cmdPwaLocal(cwd, action, args, flags) {
       break;
     }
 
-    case 'restore': {
-      if (!registryFile) {
-        error('Could not find frontier-pwa. Pass --pwa-dir <path> or set FRONTIER_PWA_DIR.');
-      }
-      const changed = removeLocalPwaEntry(registryFile);
-      output({ changed, registryFile }, flags);
-      break;
-    }
-
     default:
       error('Unknown pwa-local subcommand. Valid: info, snippet, write, restore');
   }
 }
-
 // ── State ────────────────────────────────────
 
 function loadState(cwd) {
@@ -724,7 +725,7 @@ function cmdValidateStructure(cwd, flags) {
       }
     }
 
-    if (isTier2 && flags.requirePwaTest && !flags.skipPwaTest) {
+    if ((isTier2 || isLegacy) && flags.requirePwaTest && !flags.skipPwaTest) {
       const pwaTestPath = path.join(cwd, '.frontier-app', 'PWA-TEST.md');
       if (!fs.existsSync(pwaTestPath)) {
         issues.push('Missing local PWA smoke test report: .frontier-app/PWA-TEST.md (run /fos:test-pwa)');
@@ -753,8 +754,8 @@ function cmdValidateStructure(cwd, flags) {
           'At least one SDK-backed read completed in-frame',
         ];
         for (const check of requiredPwaChecks) {
-          if (!pwaTest.includes(check)) {
-            issues.push(`.frontier-app/PWA-TEST.md missing checklist item: ${check}`);
+          if (!pwaTest.includes(`- [x] ${check}`)) {
+            issues.push(`.frontier-app/PWA-TEST.md missing checked checklist item: ${check}`);
           }
         }
       }
