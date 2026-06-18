@@ -101,7 +101,7 @@ Or set:
 export FRONTIER_PWA_DIR=/path/to/frontier-pwa
 ```
 
-`/fos:ship` treats `.frontier-app/PWA-TEST.md` with `Status: PASS`, the current app ID, the current app dev URL, and the full verification checklist as a required pre-ship gate for standalone-first apps. This catches the integration class that standalone Vite cannot catch: registry ID mismatch, wrong iframe origin or port, missing CSP frame ancestor, stale test reports, and SDK host bridge failures.
+`/fos:ship` treats `.frontier-app/PWA-TEST.md` with `Status: PASS`, the tested `Git SHA`, the current app ID, the current app dev URL, and the full verification checklist as a required pre-ship gate for standalone-first apps. This catches the integration class that standalone Vite cannot catch: registry ID mismatch, wrong iframe origin or port, missing CSP frame ancestor, stale test reports, and SDK host bridge failures.
 
 ---
 

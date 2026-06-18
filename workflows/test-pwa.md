@@ -34,6 +34,7 @@ PWA_URL=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1]
 PWA_DIR=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(i.pwaDir || '')" "$INFO_FILE")
 DEV_PORT=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(i.devPort)" "$INFO_FILE")
 LAUNCH_URL=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(i.launchUrl)" "$INFO_FILE")
+SDK_INTEGRATED=$(node -e "const i=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(i.sdkIntegrated ? 'true' : 'false')" "$INFO_FILE")
 ```
 
 **If `.frontier-app/` is missing:**
@@ -57,14 +58,19 @@ Or set:
 Exit workflow.
 
 **If `sdkIntegrated` is false:**
-Warn the user:
-```
+Stop before validation:
+```bash
+if [ "$SDK_INTEGRATED" != "true" ]; then
+  cat <<'EOF'
 This app does not appear to have SDK Integration files yet (`src/lib/sdk-context.tsx` and `src/lib/sdk-services.tsx`).
 
-The PWA iframe load can still be tested, but SDK bridge calls will only work after the SDK Integration phase.
+Run `/fos:execute [SDK Integration phase]` first, then re-run `/fos:test-pwa`.
+EOF
+  exit 1
+fi
 ```
 
-Continue unless the user explicitly cancels.
+Exit workflow. `/fos:test-pwa` is the pre-ship PWA and SDK bridge smoke test.
 </step>
 
 <step name="validate_app">
@@ -180,11 +186,11 @@ After the iframe checklist has passed, write `.frontier-app/PWA-TEST.md`:
 
 Status: PASS
 Date: [today]
+Git SHA: [git rev-parse HEAD]
 App ID: [appId]
 App URL: [appUrl]
 PWA URL: [pwaUrl]
 Launch URL: [launchUrl]
-Registry file: [registryFile]
 
 ## Verified
 
@@ -212,7 +218,11 @@ Commit the test artifact if this is a git repo:
 ```bash
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git add .frontier-app/PWA-TEST.md .frontier-app/STATE.md
-  git commit -m "test: verify local Frontier PWA iframe integration"
+  if git diff --cached --quiet; then
+    echo "No PWA test artifact changes to commit"
+  else
+    git commit -m "test: verify local Frontier PWA iframe integration"
+  fi
 fi
 ```
 

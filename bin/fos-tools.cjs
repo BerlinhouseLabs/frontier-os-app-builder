@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 // ─────────────────────────────────────────────
 // FOS Tools — CLI utility for Frontier OS App Builder
@@ -73,6 +73,22 @@ function escapeRegExp(text) {
 
 function shellQuote(text) {
   return `'${String(text).replace(/'/g, `'\\''`)}'`;
+}
+
+function gitOutput(cwd, args) {
+  try {
+    return execFileSync('git', args, {
+      cwd,
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function currentGitSha(cwd) {
+  return gitOutput(cwd, ['rev-parse', 'HEAD']);
 }
 
 // ── YAML Frontmatter Parsing ─────────────────
@@ -208,9 +224,11 @@ function getLocalPwaMetadata(cwd, opts = {}) {
 }
 
 function renderPwaAppEntry(metadata) {
-  const permissions = metadata.permissions.length > 0
-    ? metadata.permissions
-    : ['storage:*', 'chain:*'];
+  if (metadata.permissions.length === 0) {
+    error('.frontier-app/manifest.json permissions must list exact SDK permissions before writing a local PWA registry entry');
+  }
+
+  const permissions = metadata.permissions;
 
   return `{
   id: ${JSON.stringify(metadata.appId)},
@@ -228,6 +246,91 @@ function renderPwaAppEntry(metadata) {
   permissionDisclaimer:
     'Local development entry generated from .frontier-app/manifest.json for Frontier OS iframe and SDK testing.',
 } as AppMetadata,`;
+}
+
+function readPwaTestField(content, field) {
+  const match = content.match(new RegExp(`^${escapeRegExp(field)}:\\s*(.+)$`, 'm'));
+  return match ? match[1].trim() : null;
+}
+
+function isPwaRuntimePath(file) {
+  return file.startsWith('src/') ||
+    file.startsWith('public/') ||
+    file === '.frontier-app/manifest.json' ||
+    file === 'index.html' ||
+    file === 'package.json' ||
+    file === 'package-lock.json' ||
+    file === 'pnpm-lock.yaml' ||
+    file === 'yarn.lock' ||
+    file === 'vite.config.ts' ||
+    file === 'vite.config.js' ||
+    file === 'vercel.json' ||
+    file === 'tsconfig.json' ||
+    file === 'postcss.config.js' ||
+    file === 'tailwind.config.js' ||
+    file === 'tailwind.config.ts';
+}
+
+function validatePwaTestGitSha(cwd, testedSha) {
+  const currentSha = currentGitSha(cwd);
+  if (!currentSha) return { pass: true };
+  if (!testedSha) {
+    return { pass: false, issue: 'missing Git SHA' };
+  }
+  if (!/^[0-9a-f]{7,40}$/i.test(testedSha)) {
+    return { pass: false, issue: `has invalid Git SHA: ${testedSha}` };
+  }
+
+  const testedCommit = gitOutput(cwd, ['rev-parse', `${testedSha}^{commit}`]);
+  if (!testedCommit) {
+    return { pass: false, issue: `Git SHA is not in this repository: ${testedSha}` };
+  }
+  if (testedCommit === currentSha) {
+    const dirtyRuntimeFiles = getDirtyRuntimeFiles(cwd);
+    if (dirtyRuntimeFiles.length > 0) {
+      return {
+        pass: false,
+        issue: `is stale; uncommitted runtime files changed after the PWA test: ${dirtyRuntimeFiles.join(', ')}`
+      };
+    }
+    return { pass: true };
+  }
+
+  const diff = gitOutput(cwd, ['diff', '--name-only', `${testedCommit}..HEAD`]);
+  if (diff == null) {
+    return { pass: false, issue: `could not compare tested Git SHA to HEAD: ${testedSha}` };
+  }
+  const changedRuntimeFiles = diff.split('\n').filter(Boolean).filter(isPwaRuntimePath);
+  if (changedRuntimeFiles.length === 0) {
+    const dirtyRuntimeFiles = getDirtyRuntimeFiles(cwd);
+    if (dirtyRuntimeFiles.length > 0) {
+      return {
+        pass: false,
+        issue: `is stale; uncommitted runtime files changed after the PWA test: ${dirtyRuntimeFiles.join(', ')}`
+      };
+    }
+    return { pass: true };
+  }
+
+  return {
+    pass: false,
+    issue: `is stale; runtime files changed since tested Git SHA ${testedSha}: ${changedRuntimeFiles.join(', ')}`
+  };
+}
+
+function getDirtyRuntimeFiles(cwd) {
+  const changed = new Set();
+  for (const args of [
+    ['diff', '--name-only'],
+    ['diff', '--cached', '--name-only'],
+    ['ls-files', '--others', '--exclude-standard']
+  ]) {
+    const diff = gitOutput(cwd, args);
+    if (diff) {
+      diff.split('\n').filter(Boolean).forEach(file => changed.add(file));
+    }
+  }
+  return Array.from(changed).filter(isPwaRuntimePath);
 }
 
 function findPwaDir(cwd, explicitDir) {
@@ -734,6 +837,8 @@ function cmdValidateStructure(cwd, flags) {
         const expectedAppId = manifest ? getPwaAppId(manifest) : null;
         const expectedAppUrl = manifest?.devPort ? `http://localhost:${manifest.devPort}` : null;
         const expectedLaunchUrl = expectedAppId ? `http://localhost:5173/apps/${expectedAppId}` : null;
+        const testedGitSha = readPwaTestField(pwaTest, 'Git SHA');
+        const gitFreshness = validatePwaTestGitSha(cwd, testedGitSha);
         if (!pwaTest.includes('Status: PASS')) {
           issues.push('.frontier-app/PWA-TEST.md missing Status: PASS');
         }
@@ -745,6 +850,9 @@ function cmdValidateStructure(cwd, flags) {
         }
         if (expectedLaunchUrl && !pwaTest.includes(`Launch URL: ${expectedLaunchUrl}`)) {
           issues.push(`.frontier-app/PWA-TEST.md Launch URL does not match manifest app ID: ${expectedLaunchUrl}`);
+        }
+        if (!gitFreshness.pass) {
+          issues.push(`.frontier-app/PWA-TEST.md ${gitFreshness.issue}`);
         }
         const requiredPwaChecks = [
           'PWA route did not 404',

@@ -163,6 +163,7 @@ Before shipping, `/fos:test-pwa` must be run against a local `frontier-pwa` chec
 - `.frontier-app/PWA-TEST.md` exists.
 - The report contains `Status: PASS`.
 - The report contains `App ID`, `App URL`, and `Launch URL` entries matching the current manifest metadata.
+- The report contains `Git SHA` for the tested commit; shipping fails if runtime files changed after that SHA or are dirty in the worktree.
 - The verified checklist includes checked `- [x]` entries for iframe render, no standalone fallback, no unauthorized-origin error, and at least one SDK-backed read completed in-frame.
 
 ---

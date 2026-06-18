@@ -173,6 +173,7 @@ If any file outside `sdk-context.tsx` instantiates `new FrontierSDK()` directly,
 ```bash
 if test -f .frontier-app/PWA-TEST.md; then
   grep -q "Status: PASS" .frontier-app/PWA-TEST.md && echo "PASS: local PWA status" || echo "FAIL: local PWA status missing"
+  grep -Eq "^Git SHA: [0-9a-f]{7,40}$" .frontier-app/PWA-TEST.md && echo "PASS: tested git SHA recorded" || echo "FAIL: tested git SHA missing"
   grep -Eq "Launch URL: http://localhost:5173/apps/" .frontier-app/PWA-TEST.md && echo "PASS: local PWA launch URL" || echo "FAIL: local PWA launch URL missing"
   grep -q -- "- [x] No AppHostSDK unauthorized-origin error" .frontier-app/PWA-TEST.md && echo "PASS: origin verified" || echo "FAIL: origin verification missing"
 else
