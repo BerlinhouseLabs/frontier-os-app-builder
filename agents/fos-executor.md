@@ -513,7 +513,7 @@ npm run build 2>&1 | tail -5
 
 **4. Append result to SUMMARY.md:** `## Self-Check: PASSED` or `## Self-Check: FAILED` with missing items.
 
-Do NOT skip. Do NOT mark SUMMARY.md `Self-Check: PASSED` if the self-check fails.
+Do NOT skip. If the self-check fails, append `## Self-Check: FAILED` (never PASSED) and STOP — report the failure to the orchestrator and do not present the plan as complete, so it can be retried rather than silently accepted.
 </self_check>
 
 <sdk_reference>

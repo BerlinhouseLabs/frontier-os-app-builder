@@ -182,24 +182,22 @@ Follow the summary template format. Write to:
 - Next Phase Readiness: What's ready, any blockers
 </step>
 
-<step name="commit_summary">
-**Commit the SUMMARY.md. Do NOT touch STATE.md — the orchestrator owns it.**
+<step name="finalize">
+**You're done once SUMMARY.md is written. Do NOT commit `.frontier-app/` — the orchestrator owns it.**
 
-You run as one of several parallel executors, each in its own worktree. Writing STATE.md
-here would race with your siblings and be lost or conflict on worktree merge-back, so your
-only completion signal is the SUMMARY.md you just wrote. The `/fos:execute` orchestrator is
-the single writer of STATE.md: it marks `executing` before the wave and writes the
-authoritative status + body once after the whole wave verifies. Do NOT run `state update`.
+Your SUMMARY.md (written in the previous step) is your completion signal: the `/fos:execute`
+orchestrator detects it by file presence and commits all `.frontier-app/` state — including
+this SUMMARY.md — once after the whole wave verifies. So in this step you do nothing to git:
 
-```bash
-# Stage only THIS phase's dir with a RELATIVE pathspec so it resolves inside the executor's
-# worktree — an absolute $PHASE_DIR (it comes from the orchestrator checkout) would make
-# `git add` fail outside the worktree. basename keeps just "NN-slug". STATE.md lives at
-# .frontier-app/STATE.md (outside phases/), so it can never ride along; the orchestrator is
-# the sole STATE.md writer.
-git add ".frontier-app/phases/$(basename "$PHASE_DIR")/"
-git commit -m "docs: Plan $PHASE-$PLAN summary — [one-liner from summary]"
-```
+- Do NOT run `state update` — the orchestrator is the single writer of STATE.md (it marks
+  `executing` before the wave and writes the authoritative status + body post-wave).
+- Do NOT `git add` / `git commit` anything under `.frontier-app/`. You run in an
+  `isolation="worktree"` checkout while the SUMMARY path comes from the orchestrator
+  checkout (`$PHASE_DIR` is absolute), so an executor-side commit of it is both unnecessary
+  and unsafe — it would stage nothing (or fail) in the worktree.
+
+Your per-task source-code commits from the `execute_tasks` step stand — only the
+`.frontier-app/` state commit is the orchestrator's job.
 </step>
 
 <step name="next_up">
