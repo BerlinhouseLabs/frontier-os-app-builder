@@ -81,11 +81,13 @@ SDK Integration phase will be appended to wire + verify them.
 `add-phases` owns all machine bookkeeping: it picks the next phase number (max existing + 1, gap-safe), merges new modules/permissions into `manifest.json`, creates the phase directory, and — crucially — keeps the **SDK Integration** phase last with `sdkPhase` pointing at it. If the feature introduces a new module, it re-appends a fresh SDK Integration phase (or, mid-build, renumbers the still-pending one) so the new module is wired into `sdk-services.tsx` and Tier-2 verified before ship.
 
 ```bash
-# FEATURE_NAME: a short human-readable phase name you derive from the feature description
-# (e.g. "Leaderboard"). Set it explicitly here.
-FEATURE_NAME="<short feature name>"
-# Build the names array with JSON.stringify so quotes/backslashes in the name can't break the JSON.
-NAMES_JSON=$(FEATURE_NAME="$FEATURE_NAME" node -e 'process.stdout.write(JSON.stringify([process.env.FEATURE_NAME]))')
+# Build the names array safely: pipe the phase name (one per line) to Node via a QUOTED
+# heredoc, so the shell never evaluates quotes/backticks/$() inside the name, then
+# JSON.stringify. Replace the body line with your short feature name (e.g. Leaderboard).
+NAMES_JSON=$(node -e 'const ls=require("fs").readFileSync(0,"utf8").split("\n").filter(s=>s.trim()); process.stdout.write(JSON.stringify(ls))' <<'FEATURE_NAMES'
+<short feature name>
+FEATURE_NAMES
+)
 
 ADD=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" add-phases \
   --names "$NAMES_JSON" \

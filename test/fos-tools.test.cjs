@@ -269,3 +269,54 @@ test('listSummaries/executed-detection works for phase numbers >= 100', () => {
   assert.strictEqual(out.sdkIntegration.number, 102);
   assert.strictEqual(out.sdkPhase, 102);
 });
+
+test('null sdkPhase + existing executed SDK Integration + no new module: heals sdkPhase', () => {
+  const cwd = setup(
+    {
+      modules: ['Storage'],
+      permissions: [],
+      phases: [
+        { number: 1, name: 'Scaffold', status: 'not-started' },
+        { number: 2, name: 'SDK Integration', status: 'not-started' },
+      ],
+      // sdkPhase intentionally absent (null)
+    },
+    [{ name: '02-sdk-integration', files: ['02-01-SUMMARY.md'] }] // executed
+  );
+
+  const out = runJson(cwd, ['add-phases', '--names', '["Tweak"]', '--modules', 'Storage']); // no new module
+  const m = readManifest(cwd);
+
+  assert.deepStrictEqual(out.newModules, []);
+  assert.strictEqual(out.sdkIntegration.added, false);
+  assert.strictEqual(m.sdkPhase, 2, 'sdkPhase healed to the existing SDK Integration phase');
+  assert.strictEqual(out.sdkPhase, 2);
+});
+
+test('Case 1 aborts on manifest/filesystem drift instead of clobbering', () => {
+  const cwd = setup(
+    {
+      modules: ['Storage', 'Chain'],
+      permissions: [],
+      phases: [
+        { number: 1, name: 'Scaffold', status: 'not-started' },
+        { number: 2, name: 'SDK Integration', status: 'not-started' },
+      ],
+      sdkPhase: 2,
+    },
+    [
+      { name: '02-sdk-integration' }, // pending (no summary) -> Case 1 would shift 2 -> 3
+      { name: '03-orphan' },          // orphan occupies the destination number 3
+    ]
+  );
+
+  let threw = false, stderr = '';
+  try { run(cwd, ['add-phases', '--names', '["X"]', '--modules', 'Wallet']); }
+  catch (e) { threw = true; stderr = String(e.stderr || e.message || ''); }
+
+  assert.ok(threw, 'should exit non-zero on drift');
+  assert.match(stderr, /occupied on disk|drift/);
+  // No partial mutation: the SDK phase dir must NOT have been renamed.
+  assert.ok(fs.existsSync(path.join(cwd, '.frontier-app', 'phases', '02-sdk-integration')),
+    'no half-renumbered tree left behind');
+});

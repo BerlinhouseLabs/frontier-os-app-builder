@@ -717,6 +717,18 @@ function cmdAddPhases(cwd, args, flags) {
     const toShift = manifest.phases
       .filter(p => p.number >= insertAt)
       .sort((a, b) => b.number - a.number); // highest first to avoid dir collisions
+    // Preflight every destination number BEFORE mutating anything: each shifted phase's
+    // new slot and each new feature slot must be free on disk, except numbers we are
+    // ourselves vacating by moving a phase off them. Abort up front on manifest/fs drift
+    // so we never leave a half-renumbered tree or silently reuse an orphan dir.
+    const vacated = new Set(toShift.map(p => p.number));
+    for (const dest of [...toShift.map(p => p.number + shift), ...names.map((_, idx) => insertAt + idx)]) {
+      if (vacated.has(dest)) continue;
+      const occ = findPhaseDir(cwd, dest);
+      if (occ) {
+        error(`Cannot add phase: number ${dest} is already occupied on disk (phases/${path.basename(occ)}) — manifest/filesystem drift. Reconcile phase dirs before adding phases.`);
+      }
+    }
     for (const p of toShift) {
       renumberPhaseDir(cwd, p.number, p.number + shift);
       p.number += shift;
@@ -754,6 +766,11 @@ function cmdAddPhases(cwd, args, flags) {
       ensurePhaseDir(cwd, number, slug);
       manifest.sdkPhase = number;
       sdkIntegration = { number, slug, added: true, renumbered: false, fromNumber: sdkPhaseNum };
+    } else if (sdkEntry) {
+      // No new modules, but an SDK Integration phase already exists — ensure sdkPhase
+      // points at it (heals a previously-null sdkPhase; no-op if already correct).
+      manifest.sdkPhase = sdkEntry.number;
+      sdkIntegration = { number: sdkEntry.number, slug: slugForPhase(cwd, sdkEntry), added: false, renumbered: false, fromNumber: sdkPhaseNum };
     }
   }
 
