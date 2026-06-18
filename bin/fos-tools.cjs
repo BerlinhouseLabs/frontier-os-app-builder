@@ -296,7 +296,7 @@ function validatePwaTestGitSha(cwd, testedSha) {
     return { pass: true };
   }
 
-  const diff = gitOutput(cwd, ['diff', '--name-only', `${testedCommit}..HEAD`]);
+  const diff = gitOutput(cwd, ['diff', '--relative', '--name-only', `${testedCommit}..HEAD`]);
   if (diff == null) {
     return { pass: false, issue: `could not compare tested Git SHA to HEAD: ${testedSha}` };
   }
@@ -321,8 +321,8 @@ function validatePwaTestGitSha(cwd, testedSha) {
 function getDirtyRuntimeFiles(cwd) {
   const changed = new Set();
   for (const args of [
-    ['diff', '--name-only'],
-    ['diff', '--cached', '--name-only'],
+    ['diff', '--relative', '--name-only'],
+    ['diff', '--relative', '--cached', '--name-only'],
     ['ls-files', '--others', '--exclude-standard']
   ]) {
     const diff = gitOutput(cwd, args);
@@ -837,18 +837,22 @@ function cmdValidateStructure(cwd, flags) {
         const expectedAppId = manifest ? getPwaAppId(manifest) : null;
         const expectedAppUrl = manifest?.devPort ? `http://localhost:${manifest.devPort}` : null;
         const expectedLaunchUrl = expectedAppId ? `http://localhost:5173/apps/${expectedAppId}` : null;
+        const reportedStatus = readPwaTestField(pwaTest, 'Status');
+        const reportedAppId = readPwaTestField(pwaTest, 'App ID');
+        const reportedAppUrl = readPwaTestField(pwaTest, 'App URL');
+        const reportedLaunchUrl = readPwaTestField(pwaTest, 'Launch URL');
         const testedGitSha = readPwaTestField(pwaTest, 'Git SHA');
         const gitFreshness = validatePwaTestGitSha(cwd, testedGitSha);
-        if (!pwaTest.includes('Status: PASS')) {
+        if (reportedStatus !== 'PASS') {
           issues.push('.frontier-app/PWA-TEST.md missing Status: PASS');
         }
-        if (expectedAppId && !pwaTest.includes(`App ID: ${expectedAppId}`)) {
+        if (expectedAppId && reportedAppId !== expectedAppId) {
           issues.push(`.frontier-app/PWA-TEST.md App ID does not match manifest app ID: ${expectedAppId}`);
         }
-        if (expectedAppUrl && !pwaTest.includes(`App URL: ${expectedAppUrl}`)) {
+        if (expectedAppUrl && reportedAppUrl !== expectedAppUrl) {
           issues.push(`.frontier-app/PWA-TEST.md App URL does not match manifest dev port: ${expectedAppUrl}`);
         }
-        if (expectedLaunchUrl && !pwaTest.includes(`Launch URL: ${expectedLaunchUrl}`)) {
+        if (expectedLaunchUrl && reportedLaunchUrl !== expectedLaunchUrl) {
           issues.push(`.frontier-app/PWA-TEST.md Launch URL does not match manifest app ID: ${expectedLaunchUrl}`);
         }
         if (!gitFreshness.pass) {

@@ -109,7 +109,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Include reasoning to prevent re-adding later
 
 **Traceability:**
-- PLAT requirements always map to Phase 1
+- PLAT-01 through PLAT-04 map to Phase 1
+- PLAT-05 and PLAT-06 map to the final SDK Integration phase
 - Feature requirements map to subsequent phases
 - Updated during roadmap creation and after each phase completes
 

@@ -123,13 +123,27 @@ Use the URLs from `pwa-local info`.
 
 **App server:**
 ```bash
+APP_LOG="/tmp/fos-local-app-$APP_ID.log"
+APP_PID="/tmp/fos-local-app-$APP_ID.pid"
+APP_CWD="/tmp/fos-local-app-$APP_ID.cwd"
 if curl -fsS "$APP_URL" >/dev/null 2>&1; then
-  echo "App already running at $APP_URL"
+  CURRENT_CWD=$(pwd -P)
+  RECORDED_CWD=$(cat "$APP_CWD" 2>/dev/null || true)
+  RECORDED_PID=$(cat "$APP_PID" 2>/dev/null || true)
+  if [ -n "$RECORDED_PID" ] && kill -0 "$RECORDED_PID" 2>/dev/null && [ "$RECORDED_CWD" = "$CURRENT_CWD" ]; then
+    echo "App already running at $APP_URL from this checkout"
+  else
+    cat <<EOF
+Another server is already responding at $APP_URL.
+
+Stop the process using port $DEV_PORT, then re-run /fos:test-pwa so the app served in the iframe is this checkout.
+EOF
+    exit 1
+  fi
 else
-  APP_LOG="/tmp/fos-local-app-$APP_ID.log"
-  APP_PID="/tmp/fos-local-app-$APP_ID.pid"
   npm run dev -- --host localhost --port "$DEV_PORT" > "$APP_LOG" 2>&1 &
   echo $! > "$APP_PID"
+  pwd -P > "$APP_CWD"
 fi
 ```
 
