@@ -164,8 +164,12 @@ Document results for SUMMARY.md.
 <step name="write_summary">
 **Create SUMMARY.md for this plan.**
 
-Follow the summary template format. Write to:
-`$PHASE_DIR/[phase]-[plan]-SUMMARY.md`
+Follow the summary template format. Use the **Write tool** to create it at a path
+**relative to the app root** — NOT the absolute `$PHASE_DIR`. A relative path lands in your
+`isolation="worktree"` checkout so the commit in the next step can stage it and merge it back
+to the main checkout (the same way your per-task source commits do):
+`.frontier-app/phases/<NN-slug>/[phase]-[plan]-SUMMARY.md`
+(where `<NN-slug>` is the phase directory name, i.e. `basename "$PHASE_DIR"`)
 
 **Content:**
 - Frontmatter: phase, plan, subsystem, tags, requires, provides, affects, tech-stack, key-files, key-decisions, patterns-established, sdk-modules-used, requirements-completed, duration, completed
@@ -183,21 +187,21 @@ Follow the summary template format. Write to:
 </step>
 
 <step name="finalize">
-**You're done once SUMMARY.md is written. Do NOT commit `.frontier-app/` — the orchestrator owns it.**
+**Commit the SUMMARY.md (relative pathspec), then you're done. Never write STATE.md.**
 
-Your SUMMARY.md (written in the previous step) is your completion signal: the `/fos:execute`
-orchestrator detects it by file presence and commits all `.frontier-app/` state — including
-this SUMMARY.md — once after the whole wave verifies. So in this step you do nothing to git:
+The SUMMARY.md you just wrote (relative, in your worktree) is your completion signal. Commit
+it with a RELATIVE pathspec so it stays inside your `isolation="worktree"` checkout and merges
+back to main like your per-task source commits — never use the absolute `$PHASE_DIR` in
+`git add` (it points at the orchestrator checkout and would fail), and never run `state update`.
+Staging the phase dir (not all of `.frontier-app/`) keeps STATE.md — which lives at
+`.frontier-app/STATE.md`, outside `phases/` — out of this commit. STATE.md is written only by
+the `/fos:execute` orchestrator (it marks `executing` before the wave and writes the
+authoritative status + body post-wave).
 
-- Do NOT run `state update` — the orchestrator is the single writer of STATE.md (it marks
-  `executing` before the wave and writes the authoritative status + body post-wave).
-- Do NOT `git add` / `git commit` anything under `.frontier-app/`. You run in an
-  `isolation="worktree"` checkout while the SUMMARY path comes from the orchestrator
-  checkout (`$PHASE_DIR` is absolute), so an executor-side commit of it is both unnecessary
-  and unsafe — it would stage nothing (or fail) in the worktree.
-
-Your per-task source-code commits from the `execute_tasks` step stand — only the
-`.frontier-app/` state commit is the orchestrator's job.
+```bash
+git add ".frontier-app/phases/$(basename "$PHASE_DIR")/"
+git commit -m "docs: Plan $PHASE-$PLAN summary — [one-liner from summary]"
+```
 </step>
 
 <step name="next_up">
