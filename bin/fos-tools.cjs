@@ -547,15 +547,245 @@ function cmdFindPhase(cwd, phaseNum, flags) {
 function listPlans(phaseDir) {
   if (!phaseDir || !fs.existsSync(phaseDir)) return [];
   return fs.readdirSync(phaseDir)
-    .filter(f => f.match(/^\d{2}-\d{2}-PLAN\.md$/))
+    .filter(f => f.match(/^\d{2,}-\d{2,}-PLAN\.md$/))
     .sort();
 }
 
 function listSummaries(phaseDir) {
   if (!phaseDir || !fs.existsSync(phaseDir)) return [];
   return fs.readdirSync(phaseDir)
-    .filter(f => f.match(/^\d{2}-\d{2}-SUMMARY\.md$/))
+    .filter(f => f.match(/^\d{2,}-\d{2,}-SUMMARY\.md$/))
     .sort();
+}
+
+// ── Phase Numbering & SDK-Integration Invariant ──
+//
+// Invariant maintained here: the "SDK Integration" phase is always the LAST
+// phase and `manifest.sdkPhase` always points to it. add-feature/new-milestone
+// delegate phase placement to `add-phases` so this can never drift (see the
+// consumers in execute.md, validate tiering, fos-verifier, discuss skip).
+
+function listPhaseNumbers(cwd) {
+  const nums = new Set();
+  const phasesDir = path.join(fosDir(cwd), 'phases');
+  if (fs.existsSync(phasesDir)) {
+    for (const e of fs.readdirSync(phasesDir)) {
+      const m = e.match(/^(\d+)-/);
+      if (m) nums.add(parseInt(m[1], 10));
+    }
+  }
+  const manifest = loadManifest(cwd);
+  if (manifest && Array.isArray(manifest.phases)) {
+    for (const p of manifest.phases) {
+      if (Number.isInteger(p.number)) nums.add(p.number);
+    }
+  }
+  return Array.from(nums).sort((a, b) => a - b);
+}
+
+function computeNextPhase(cwd) {
+  const nums = listPhaseNumbers(cwd);
+  return nums.length ? Math.max(...nums) + 1 : 1;
+}
+
+function cmdNextPhase(cwd, flags) {
+  const next = computeNextPhase(cwd);
+  output(flags.raw ? String(next) : { next }, flags);
+}
+
+function phaseDirName(number, slug) {
+  return `${String(number).padStart(2, '0')}-${slug}`;
+}
+
+function slugForPhase(cwd, entry) {
+  const dir = findPhaseDir(cwd, entry.number);
+  if (dir) {
+    const m = path.basename(dir).match(/^\d+-(.+)$/);
+    if (m) return m[1];
+  }
+  return generateSlug(entry.name);
+}
+
+function ensurePhaseDir(cwd, number, slug) {
+  const dir = path.join(fosDir(cwd), 'phases', phaseDirName(number, slug));
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+// Renumber a phase directory from `fromNum` to `toNum`, including the leading
+// `NN-` prefix on its inner artifact files (CONTEXT/RESEARCH/PLAN/SUMMARY/...).
+function renumberPhaseDir(cwd, fromNum, toNum) {
+  const dir = findPhaseDir(cwd, fromNum);
+  if (!dir) return;
+  // Refuse to renumber onto a number already occupied on disk (manifest/filesystem
+  // drift) — renaming would clobber or produce ambiguous ordering. Normal shifts run
+  // highest-first so the destination is always vacant; a hit here means real drift.
+  const occupied = findPhaseDir(cwd, toNum);
+  if (occupied) {
+    error(`Cannot renumber phase ${fromNum} -> ${toNum}: phases/${path.basename(occupied)} already occupies number ${toNum} (manifest/filesystem drift). Reconcile phase dirs before adding phases.`);
+  }
+  const m = path.basename(dir).match(/^\d+-(.+)$/);
+  const slug = m ? m[1] : '';
+  const oldPrefix = String(fromNum).padStart(2, '0');
+  const newPrefix = String(toNum).padStart(2, '0');
+  for (const f of fs.readdirSync(dir)) {
+    if (f.startsWith(oldPrefix + '-')) {
+      fs.renameSync(path.join(dir, f), path.join(dir, newPrefix + f.slice(oldPrefix.length)));
+    }
+  }
+  fs.renameSync(dir, path.join(path.dirname(dir), phaseDirName(toNum, slug)));
+}
+
+function parseListArg(val) {
+  if (!val) return [];
+  const trimmed = String(val).trim();
+  if (trimmed.startsWith('[')) {
+    try {
+      const arr = JSON.parse(trimmed);
+      return Array.isArray(arr) ? arr.map(String).map(s => s.trim()).filter(Boolean) : [];
+    } catch { error(`Invalid JSON list: ${val}`); }
+  }
+  return trimmed.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+// Add feature phase(s) while preserving the SDK-Integration-last invariant.
+//   add-phases --names '["Feature A","Feature B"]' [--modules M1,M2] [--permissions p1,p2]
+function cmdAddPhases(cwd, args, flags) {
+  let namesRaw = null, modulesRaw = null, permsRaw = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--names' && args[i + 1]) namesRaw = args[++i];
+    else if (args[i] === '--modules' && args[i + 1]) modulesRaw = args[++i];
+    else if (args[i] === '--permissions' && args[i + 1]) permsRaw = args[++i];
+  }
+  if (!namesRaw) error('add-phases requires --names \'["Phase Name", ...]\'');
+
+  let names;
+  try { names = JSON.parse(namesRaw); } catch { error(`--names must be a JSON array of strings: ${namesRaw}`); }
+  if (!Array.isArray(names) || names.length === 0 || !names.every(n => typeof n === 'string' && n.trim())) {
+    error('--names must be a non-empty JSON array of non-empty strings');
+  }
+  names = names.map(n => n.trim());
+
+  const manifest = loadManifest(cwd);
+  if (!manifest) error('.frontier-app/manifest.json not found');
+  if (!Array.isArray(manifest.phases)) manifest.phases = [];
+
+  // Merge modules/permissions as deduped unions (existing first, then new).
+  const existingModules = Array.isArray(manifest.modules) ? manifest.modules : [];
+  const newModules = parseListArg(modulesRaw).filter(m => !existingModules.includes(m));
+  manifest.modules = [...existingModules, ...newModules];
+
+  const existingPerms = Array.isArray(manifest.permissions) ? manifest.permissions : [];
+  const newPermissions = parseListArg(permsRaw).filter(p => !existingPerms.includes(p));
+  manifest.permissions = [...existingPerms, ...newPermissions];
+
+  // Locate the SDK Integration phase and decide whether it has already executed.
+  // Resolve by sdkPhase FIRST — there can be more than one phase named "SDK
+  // Integration" (an executed historical one + a fresh pending one), and sdkPhase
+  // is the source of truth for which is operative. Fall back to the highest-
+  // numbered "SDK Integration" only when sdkPhase is absent.
+  const sdkPhaseNum = Number.isInteger(manifest.sdkPhase) ? manifest.sdkPhase : null;
+  let sdkEntry = sdkPhaseNum != null
+    ? (manifest.phases.find(p => p.number === sdkPhaseNum) || null)
+    : null;
+  if (!sdkEntry) {
+    sdkEntry = manifest.phases
+      .filter(p => p.name === 'SDK Integration')
+      .sort((a, b) => b.number - a.number)[0] || null;
+  }
+  let sdkExecuted = false;
+  if (sdkEntry) {
+    const dir = findPhaseDir(cwd, sdkEntry.number);
+    sdkExecuted = dir ? listSummaries(dir).length > 0 : false;
+  }
+
+  const featurePhases = [];
+  let sdkIntegration = {
+    number: sdkEntry ? sdkEntry.number : null,
+    slug: sdkEntry ? slugForPhase(cwd, sdkEntry) : 'sdk-integration',
+    added: false,
+    renumbered: false,
+    fromNumber: null,
+  };
+
+  if (sdkEntry && !sdkExecuted) {
+    // CASE 1 (mid-build): insert features before the still-pending SDK phase,
+    // shift it (and anything after it) up, repoint sdkPhase. New modules will be
+    // wired when the pending SDK phase finally runs.
+    const insertAt = sdkEntry.number;
+    const shift = names.length;
+    const toShift = manifest.phases
+      .filter(p => p.number >= insertAt)
+      .sort((a, b) => b.number - a.number); // highest first to avoid dir collisions
+    // Preflight every destination number BEFORE mutating anything: each shifted phase's
+    // new slot and each new feature slot must be free on disk, except numbers we are
+    // ourselves vacating by moving a phase off them. Abort up front on manifest/fs drift
+    // so we never leave a half-renumbered tree or silently reuse an orphan dir.
+    const vacated = new Set(toShift.map(p => p.number));
+    for (const dest of [...toShift.map(p => p.number + shift), ...names.map((_, idx) => insertAt + idx)]) {
+      if (vacated.has(dest)) continue;
+      const occ = findPhaseDir(cwd, dest);
+      if (occ) {
+        error(`Cannot add phase: number ${dest} is already occupied on disk (phases/${path.basename(occ)}) — manifest/filesystem drift. Reconcile phase dirs before adding phases.`);
+      }
+    }
+    for (const p of toShift) {
+      renumberPhaseDir(cwd, p.number, p.number + shift);
+      p.number += shift;
+    }
+    names.forEach((name, idx) => {
+      const number = insertAt + idx;
+      const slug = generateSlug(name);
+      manifest.phases.push({ number, name, status: 'not-started' });
+      ensurePhaseDir(cwd, number, slug);
+      featurePhases.push({ number, name, slug });
+    });
+    manifest.sdkPhase = sdkEntry.number; // already shifted in the loop above
+    sdkIntegration = {
+      number: sdkEntry.number,
+      slug: slugForPhase(cwd, sdkEntry),
+      added: false,
+      renumbered: true,
+      fromNumber: insertAt,
+    };
+  } else {
+    // CASE 2 (iterating / legacy): append features at the end; if any new module
+    // was introduced, append a fresh SDK Integration phase so it gets wired + Tier-2 verified.
+    let next = computeNextPhase(cwd);
+    names.forEach((name) => {
+      const number = next++;
+      const slug = generateSlug(name);
+      manifest.phases.push({ number, name, status: 'not-started' });
+      ensurePhaseDir(cwd, number, slug);
+      featurePhases.push({ number, name, slug });
+    });
+    if (newModules.length > 0) {
+      const number = next++;
+      const slug = 'sdk-integration';
+      manifest.phases.push({ number, name: 'SDK Integration', status: 'not-started' });
+      ensurePhaseDir(cwd, number, slug);
+      manifest.sdkPhase = number;
+      sdkIntegration = { number, slug, added: true, renumbered: false, fromNumber: sdkPhaseNum };
+    } else if (sdkEntry) {
+      // No new modules, but an SDK Integration phase already exists — ensure sdkPhase
+      // points at it (heals a previously-null sdkPhase; no-op if already correct).
+      manifest.sdkPhase = sdkEntry.number;
+      sdkIntegration = { number: sdkEntry.number, slug: slugForPhase(cwd, sdkEntry), added: false, renumbered: false, fromNumber: sdkPhaseNum };
+    }
+  }
+
+  manifest.phases.sort((a, b) => a.number - b.number);
+  saveManifest(cwd, manifest);
+
+  output({
+    featurePhases,
+    sdkIntegration,
+    sdkPhase: manifest.sdkPhase ?? null,
+    newModules,
+    allModules: manifest.modules,
+    newPermissions,
+    firstFeatureNumber: featurePhases[0] ? featurePhases[0].number : null,
+  }, flags);
 }
 
 // ── Scaffold ─────────────────────────────────
@@ -1182,6 +1412,8 @@ Commands:
   state update <field> <value>     Update STATE.md field
   state get <field>                Get STATE.md field
   find-phase <N>                   Find phase directory by number
+  next-phase                       Print the next phase number (max existing + 1)
+  add-phases --names '[..]'        Add feature phase(s), keep SDK Integration last
   scaffold <template> [--vars '{}'] Render template with variable substitution
   infer-modules "<description>"    Map description to SDK modules
   validate structure               Check app structure matches spec
@@ -1219,6 +1451,14 @@ Commands:
 
     case 'find-phase':
       cmdFindPhase(cwd, rest[0], flags);
+      break;
+
+    case 'next-phase':
+      cmdNextPhase(cwd, flags);
+      break;
+
+    case 'add-phases':
+      cmdAddPhases(cwd, rest, flags);
       break;
 
     case 'scaffold': {

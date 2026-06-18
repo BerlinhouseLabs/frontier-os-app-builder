@@ -17,6 +17,7 @@
     "README.md"
   ],
   "scripts": {
+    "test": "node --test test/*.test.cjs",
     "prepublishOnly": "node --check bin/install.js && node bin/fos-tools.cjs version"
   },
   "engines": {

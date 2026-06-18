@@ -107,33 +107,32 @@ Parse the response into individual features. Each feature becomes a candidate fo
 **Infer SDK modules for the new features.**
 
 ```bash
-MODULES=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" infer-modules "<new feature descriptions>")
+INFO=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" infer-modules "<new feature descriptions>")
+if [[ "$INFO" == @file:* ]]; then INFO=$(cat "${INFO#@file:}"); fi
+INFERRED_MODULES=$(printf '%s' "$INFO" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write((d.modules||[]).join(','))")
+INFERRED_PERMS=$(printf '%s' "$INFO" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write((d.permissions||[]).join(','))")
 ```
 
-Compare with existing modules from manifest:
-- **Already have:** Modules in current manifest that are still needed
-- **New modules:** Modules inferred from new features not in current manifest
-- **Removed modules:** Modules in current manifest not needed by any feature (old or new) — rare
+`add-phases` (called in `update_all_state_files`) computes which modules/permissions are genuinely new and merges them — you don't need to diff by hand. Show the user a short summary:
 
 ```
 ## New Milestone: SDK Module Changes
 
 **Keeping:** [existing modules still in use]
-**Adding:** [new modules required by new features]
-[If any removed:] **No longer needed:** [removed modules]
+**Adding (inferred):** [inferred modules]
 
-New permissions required: [list new permissions]
+New permissions will be merged by `add-phases`. Because a new milestone adds
+features, if any new module is introduced a fresh **SDK Integration** phase is
+appended last so the new module is wired + Tier-2 verified.
 ```
 </step>
 
 <step name="create_new_phases">
 **Create new phases in the roadmap.**
 
-Calculate the next phase number from the highest existing phase:
+Get the starting phase number for the preview (the actual placement is done by `add-phases` in `update_all_state_files`):
 ```bash
-# Find highest phase number in phases directory
-HIGHEST=$(ls .frontier-app/phases/ 2>/dev/null | sort -r | head -1 | cut -d- -f1)
-NEXT_PHASE=$((10#$HIGHEST + 1))
+NEXT_PHASE=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" next-phase --raw)
 ```
 
 Generate new phases from the features:
@@ -171,27 +170,39 @@ If AskUserQuestion denied: display the plan and proceed with "Looks good".
 </step>
 
 <step name="update_all_state_files">
-**Update ROADMAP.md, manifest.json, STATE.md, PROJECT.md.**
+**Update manifest.json (via add-phases), ROADMAP.md, REQUIREMENTS.md, STATE.md, PROJECT.md.**
 
-**1. ROADMAP.md:**
+**1. Place phases + merge modules — `add-phases`:**
+Pass every new phase name (in order) plus the inferred modules/permissions. `add-phases` merges the new modules/permissions into `manifest.json`, appends the feature phases at the end, and — when any new module is introduced — appends a fresh **SDK Integration** phase last with `sdkPhase` pointing at it. It also creates the phase directories. (The prior milestone's SDK Integration phase is already executed, so this is always the append case.)
+
+```bash
+# JSON array of the new phase names, in order. Pipe them — one per line — to Node via a
+# QUOTED heredoc so the shell can't evaluate metacharacters in any name, then JSON.stringify:
+NAMES_JSON=$(node -e 'const ls=require("fs").readFileSync(0,"utf8").split("\n").filter(s=>s.trim()); process.stdout.write(JSON.stringify(ls))' <<'FEATURE_NAMES'
+[Feature 1]
+[Feature 2]
+FEATURE_NAMES
+)
+ADD=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" add-phases \
+  --names "$NAMES_JSON" \
+  --modules "$INFERRED_MODULES" \
+  --permissions "$INFERRED_PERMS")
+if [[ "$ADD" == @file:* ]]; then ADD=$(cat "${ADD#@file:}"); fi
+
+# First new phase number (to discuss next)
+NEXT_PHASE=$(printf '%s' "$ADD" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); process.stdout.write(String(d.firstFeatureNumber))")
+```
+
+Parse the descriptor for `featurePhases[]` (numbers/slugs), `sdkIntegration` (`{number, added}`), `sdkPhase`, `newModules`, `newPermissions`. Do NOT hand-edit `manifest.json` phases/modules/permissions or `mkdir` phase dirs — `add-phases` is the single writer of phase structure.
+
+Then bump the milestone in `manifest.json` (a one-field edit; `add-phases` does not touch it): set `"milestone": "[new version]"`.
+
+**2. ROADMAP.md:**
 Add new phase section under `## [New Version] Phases`:
 - Keep completed phases from previous milestones (marked as done)
-- Add new phase details with goals, dependencies, requirements, success criteria
-- Update progress table with new phases
-
-**2. manifest.json:**
-```json
-{
-  "milestone": "[new version]",
-  "modules": [/* updated module list */],
-  "permissions": [/* updated permissions list */],
-  "phases": [
-    /* existing completed phases */,
-    {"number": N, "name": "[Feature]", "status": "not-started"},
-    /* ... new phases ... */
-  ]
-}
-```
+- Add a phase line + details for each `featurePhases[]` entry (goals, dependencies, requirements, success criteria)
+- If `sdkIntegration.added`, also add **Phase [sdkIntegration.number]: SDK Integration** at the end (mechanical: wire the real SDK adapter + Tier-2 verification)
+- Update the progress table with the new phases
 
 **3. REQUIREMENTS.md:**
 Add new requirements for the new milestone:
@@ -218,13 +229,7 @@ Update body:
 - Update "What This Is" if the app's scope has grown
 - Log milestone transition in Key Decisions table
 
-**Create phase directories:**
-```bash
-for PHASE in $NEW_PHASES; do
-  PADDED=$(printf "%02d" $PHASE_NUM)
-  mkdir -p ".frontier-app/phases/${PADDED}-${PHASE_SLUG}"
-done
-```
+Phase directories were already created by `add-phases` in step 1 — no `mkdir` needed.
 
 **Commit everything:**
 ```bash
@@ -250,8 +255,9 @@ New phases:
 - Phase [N+1]: [Name]
 - Phase [N+2]: [Name]
 
-[If new modules:] New SDK modules: [list]
-[If new permissions:] New permissions: [count] added
+[If new modules:] New SDK modules: [newModules]
+[If new permissions:] New permissions: [newPermissions]
+[If sdkIntegration.added:] SDK Integration appended as Phase [sdkIntegration.number] (last) — wires + Tier-2 verifies the new modules before ship.
 
 ────────────────────────────────────────
 Next up: `/fos:discuss [first-new-phase]`
