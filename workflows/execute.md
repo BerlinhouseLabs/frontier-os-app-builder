@@ -117,11 +117,12 @@ Studio) for the duration of the wave:
 
 ```bash
 node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update status "executing"
-# Commit only if the status actually changed (no-op-safe on re-run). Use --no-verify so this
-# metadata commit doesn't run app pre-commit hooks; a real commit failure should stop the run.
+# Commit ONLY STATE.md, and only if it actually changed (no-op-safe on re-run). A pathspec
+# commit (`--only`) records just STATE.md regardless of the index, so this metadata commit
+# can't sweep in a developer's unrelated already-staged changes in the main checkout.
+# --no-verify: skip app pre-commit hooks for this metadata commit; a real failure stops the run.
 if ! git diff --quiet -- .frontier-app/STATE.md; then
-  git add .frontier-app/STATE.md
-  git commit -m "docs: Phase $PHASE executing" --no-verify --quiet
+  git commit --only --no-verify --quiet -m "docs: Phase $PHASE executing" -- .frontier-app/STATE.md
 fi
 ```
 
