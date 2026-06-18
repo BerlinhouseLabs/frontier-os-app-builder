@@ -182,22 +182,20 @@ Follow the summary template format. Write to:
 - Next Phase Readiness: What's ready, any blockers
 </step>
 
-<step name="update_state">
-**Update STATE.md with plan completion.**
+<step name="commit_summary">
+**Commit the SUMMARY.md. Do NOT touch STATE.md — the orchestrator owns it.**
+
+You run as one of several parallel executors, each in its own worktree. Writing STATE.md
+here would race with your siblings and be lost or conflict on worktree merge-back, so your
+only completion signal is the SUMMARY.md you just wrote. The `/fos:execute` orchestrator is
+the single writer of STATE.md: it marks `executing` before the wave and writes the
+authoritative status + body once after the whole wave verifies. Do NOT run `state update`.
 
 ```bash
-# Update plan counter
-node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update plan "[next_plan_or_done]"
-node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update status "executing"
-```
-
-Also update STATE.md body:
-- Current Position: Plan [M] of [total] in Phase [N]
-- Last activity: [today] — Completed Plan [M]: [plan name]
-- Recent Decisions: Add any decisions from this plan
-
-```bash
-git add .frontier-app/
+# Stage the PHASE DIR only (NOT .frontier-app/). STATE.md lives at .frontier-app/STATE.md —
+# outside $PHASE_DIR — so a stray edit to it can never be staged or committed here. The
+# orchestrator is the sole STATE.md writer.
+git add "$PHASE_DIR"
 git commit -m "docs: Plan $PHASE-$PLAN summary — [one-liner from summary]"
 ```
 </step>

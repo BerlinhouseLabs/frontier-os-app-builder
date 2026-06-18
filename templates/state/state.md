@@ -89,7 +89,7 @@ The YAML frontmatter enables machine parsing by workflows:
 | `milestone` | v1, v2, ... | Current milestone version |
 | `phase` | 1, 2, 3, ... | Current phase number |
 | `plan` | 01, 02, ... | Current plan within phase |
-| `status` | ready-to-discuss, discussing, ready-to-plan, planning, ready-to-execute, executing, phase-complete, milestone-complete | Machine-readable state |
+| `status` | ready-to-discuss, ready-to-plan, ready-to-execute, executing, ready-to-test, ready-to-ship, phase-complete, milestone-complete, shipped | Machine-readable state |
 | `next_action` | /fos:discuss N, /fos:plan N, /fos:execute N, /fos:ship | Exact command to run next |
 
 </frontmatter>
