@@ -503,9 +503,31 @@ function cmdStateJson(cwd, flags) {
   output(state.frontmatter, flags);
 }
 
+// Canonical STATE.md frontmatter vocabulary — this CLI is the single source of truth
+// (keep in sync with templates/state/state.md). `status` is the field workflows route on
+// (execute.md / status.md / next.md), so it is a closed enum; other fields stay lenient.
+const STATE_FIELDS = ['milestone', 'phase', 'plan', 'status', 'next_action'];
+const STATE_STATUSES = [
+  'ready-to-discuss', 'ready-to-plan', 'ready-to-execute', 'executing',
+  'ready-to-test', 'ready-to-ship', 'phase-complete', 'milestone-complete', 'shipped',
+];
+
 function cmdStateUpdate(cwd, field, value, flags) {
   const state = loadState(cwd);
   if (!state) error('.frontier-app/STATE.md not found');
+
+  // Validate before mutating so a typo fails loud instead of silently corrupting the
+  // routing state. Checks run on the raw value (status is never numeric/boolean).
+  if (!STATE_FIELDS.includes(field)) {
+    error(`Unknown STATE field "${field}". Valid: ${STATE_FIELDS.join(', ')}`);
+  }
+  if (field === 'status' && !STATE_STATUSES.includes(value)) {
+    error(`Invalid status "${value}". Valid: ${STATE_STATUSES.join(', ')}`);
+  }
+  if (field === 'phase' && !(/^\d+$/.test(value) && parseInt(value, 10) >= 1)) {
+    error(`Invalid phase "${value}". Must be a positive integer.`);
+  }
+
   // Parse value
   let parsed = value;
   if (value === 'true') parsed = true;

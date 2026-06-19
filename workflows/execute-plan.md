@@ -164,8 +164,12 @@ Document results for SUMMARY.md.
 <step name="write_summary">
 **Create SUMMARY.md for this plan.**
 
-Follow the summary template format. Write to:
-`$PHASE_DIR/[phase]-[plan]-SUMMARY.md`
+Follow the summary template format. Use the **Write tool** to create it at a path
+**relative to the app root** — NOT the absolute `$PHASE_DIR`. A relative path lands in your
+`isolation="worktree"` checkout so the commit in the next step can stage it and merge it back
+to the main checkout (the same way your per-task source commits do):
+`.frontier-app/phases/<NN-slug>/[phase]-[plan]-SUMMARY.md`
+(where `<NN-slug>` is the phase directory name, i.e. `basename "$PHASE_DIR"`)
 
 **Content:**
 - Frontmatter: phase, plan, subsystem, tags, requires, provides, affects, tech-stack, key-files, key-decisions, patterns-established, sdk-modules-used, requirements-completed, duration, completed
@@ -182,22 +186,20 @@ Follow the summary template format. Write to:
 - Next Phase Readiness: What's ready, any blockers
 </step>
 
-<step name="update_state">
-**Update STATE.md with plan completion.**
+<step name="finalize">
+**Commit the SUMMARY.md (relative pathspec), then you're done. Never write STATE.md.**
+
+The SUMMARY.md you just wrote (relative, in your worktree) is your completion signal. Commit
+it with a RELATIVE pathspec so it stays inside your `isolation="worktree"` checkout and merges
+back to main like your per-task source commits — never use the absolute `$PHASE_DIR` in
+`git add` (it points at the orchestrator checkout and would fail), and never run `state update`.
+Staging the phase dir (not all of `.frontier-app/`) keeps STATE.md — which lives at
+`.frontier-app/STATE.md`, outside `phases/` — out of this commit. STATE.md is written only by
+the `/fos:execute` orchestrator (it marks `executing` before the wave and writes the
+authoritative status + body post-wave).
 
 ```bash
-# Update plan counter
-node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update plan "[next_plan_or_done]"
-node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update status "executing"
-```
-
-Also update STATE.md body:
-- Current Position: Plan [M] of [total] in Phase [N]
-- Last activity: [today] — Completed Plan [M]: [plan name]
-- Recent Decisions: Add any decisions from this plan
-
-```bash
-git add .frontier-app/
+git add ".frontier-app/phases/$(basename "$PHASE_DIR")/"
 git commit -m "docs: Plan $PHASE-$PLAN summary — [one-liner from summary]"
 ```
 </step>

@@ -110,6 +110,22 @@ For each plan file in `incomplete_plans`:
 <step name="execute_waves">
 **Execute each wave in sequence. Plans within a wave run in parallel.**
 
+**Mark execution started (orchestrator owns STATE.md).** Before spawning any executors,
+set the status once here in the main checkout. The parallel worktree executors never write
+STATE.md, so this single up-front write cannot race with them and stays observable (e.g. to
+Studio) for the duration of the wave:
+
+```bash
+node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update status "executing"
+# Commit ONLY STATE.md, and only if it actually changed (no-op-safe on re-run). A pathspec
+# commit (`--only`) records just STATE.md regardless of the index, so this metadata commit
+# can't sweep in a developer's unrelated already-staged changes in the main checkout.
+# --no-verify: skip app pre-commit hooks for this metadata commit; a real failure stops the run.
+if ! git diff --quiet -- .frontier-app/STATE.md; then
+  git commit --only --no-verify --quiet -m "docs: Phase $PHASE executing" -- .frontier-app/STATE.md
+fi
+```
+
 **For each wave:**
 
 1. **Describe what's being built (BEFORE spawning):**
@@ -134,7 +150,8 @@ For each plan file in `incomplete_plans`:
      prompt="
        <objective>
        Execute plan [plan_number] of Phase [phase_number]-[phase_name].
-       Commit each task atomically. Create SUMMARY.md when done. Update STATE.md.
+       Commit each task atomically. Create SUMMARY.md when done.
+       Do NOT write STATE.md — the orchestrator owns it.
        </objective>
 
        <parallel_execution>
@@ -410,7 +427,7 @@ Use AskUserQuestion (if available):
 
 **If "Fix manually":** Exit with message: "Fix the gaps listed in `$VERIFICATION_FILE`, then run `/fos:execute [N]` to re-verify."
 
-**If "Accept with gaps":** Continue to update_state_and_roadmap. Update phase status to "partial" instead of "complete" in STATE.md. Gaps remain documented in VERIFICATION.md.
+**If "Accept with gaps":** Continue to update_state_and_roadmap. Record the phase as **partial** (instead of "complete") in ROADMAP.md and the STATE.md body — do NOT pass "partial" to `state update status`; "partial" is not a valid machine status, so the frontmatter `status` field stays `phase-complete`. Gaps remain documented in VERIFICATION.md.
 
 **If AskUserQuestion denied:** Default to "Generate gap-closure plans and re-execute".
 </step>
@@ -424,9 +441,10 @@ Use AskUserQuestion (if available):
 - If current phase = total phases: next is ship
 
 ```bash
-# Update state
+# Update state (orchestrator is the sole STATE.md writer)
 node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update status "phase-complete"
 node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update phase "$PHASE"
+node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" state update plan "done"
 
 # Read sdkPhase from manifest
 SDK_PHASE=$(node -e "const m=JSON.parse(require('fs').readFileSync('.frontier-app/manifest.json','utf8')); console.log(m.sdkPhase || -1)")

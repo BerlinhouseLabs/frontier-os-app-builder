@@ -17,7 +17,7 @@ const BIN = path.join(__dirname, '..', 'bin', 'fos-tools.cjs');
 
 // Build a temp app dir with a .frontier-app/manifest.json and optional phase dirs.
 //   phaseDirs: [{ name: '03-sdk-integration', files: ['03-01-SUMMARY.md'] }]
-function setup(manifest, phaseDirs = []) {
+function setup(manifest, phaseDirs = [], stateFm = null) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fos-test-'));
   const phases = path.join(dir, '.frontier-app', 'phases');
   fs.mkdirSync(phases, { recursive: true });
@@ -29,6 +29,12 @@ function setup(manifest, phaseDirs = []) {
     const pdir = path.join(phases, d.name);
     fs.mkdirSync(pdir, { recursive: true });
     for (const f of d.files || []) fs.writeFileSync(path.join(pdir, f), '# fixture\n');
+  }
+  // Seed STATE.md when a fixture frontmatter is given — `state update` reads STATE.md
+  // first and errors "STATE.md not found" otherwise, which would mask validation errors.
+  if (stateFm) {
+    const fm = Object.entries(stateFm).map(([k, v]) => `${k}: ${v}`).join('\n');
+    fs.writeFileSync(path.join(dir, '.frontier-app', 'STATE.md'), `---\n${fm}\n---\n\n# App State\n`);
   }
   return dir;
 }
@@ -319,4 +325,61 @@ test('Case 1 aborts on manifest/filesystem drift instead of clobbering', () => {
   // No partial mutation: the SDK phase dir must NOT have been renamed.
   assert.ok(fs.existsSync(path.join(cwd, '.frontier-app', 'phases', '02-sdk-integration')),
     'no half-renumbered tree left behind');
+});
+
+// ── state update validation ───────────────────────────────────────────────
+// `status` is the field workflows route on, so it is a closed enum; unknown fields and
+// invalid statuses must fail loud (non-zero exit) instead of silently corrupting STATE.md.
+const STATE_FM = { milestone: 'v1', phase: 1, plan: '01', status: 'ready-to-discuss', next_action: '/fos:discuss 1' };
+const STATUSES = ['ready-to-discuss', 'ready-to-plan', 'ready-to-execute', 'executing',
+  'ready-to-test', 'ready-to-ship', 'phase-complete', 'milestone-complete', 'shipped'];
+
+test('state update: valid status accepted and persisted', () => {
+  const cwd = setup({ phases: [] }, [], STATE_FM);
+  const out = runJson(cwd, ['state', 'update', 'status', 'ready-to-ship']);
+  assert.strictEqual(out.updated, 'status');
+  assert.strictEqual(out.value, 'ready-to-ship');
+  assert.strictEqual(run(cwd, ['state', 'get', 'status', '--raw']).trim(), 'ready-to-ship');
+});
+
+test('state update: every canonical status is accepted', () => {
+  const cwd = setup({ phases: [] }, [], STATE_FM);
+  for (const s of STATUSES) {
+    assert.strictEqual(runJson(cwd, ['state', 'update', 'status', s]).value, s, `status "${s}" should be accepted`);
+  }
+});
+
+test('state update: invalid status rejected (non-zero exit), STATE unchanged', () => {
+  const cwd = setup({ phases: [] }, [], STATE_FM);
+  let threw = false, stderr = '';
+  try { run(cwd, ['state', 'update', 'status', 'redy-to-test']); }
+  catch (e) { threw = true; stderr = String(e.stderr || e.message || ''); }
+  assert.ok(threw, 'should exit non-zero on invalid status');
+  assert.match(stderr, /Invalid status/);
+  assert.match(stderr, /ready-to-discuss/); // error lists the valid statuses
+  assert.strictEqual(run(cwd, ['state', 'get', 'status', '--raw']).trim(), 'ready-to-discuss', 'STATE.md untouched');
+});
+
+test('state update: unknown field rejected', () => {
+  const cwd = setup({ phases: [] }, [], STATE_FM);
+  let threw = false, stderr = '';
+  try { run(cwd, ['state', 'update', 'stattus', 'ready-to-ship']); }
+  catch (e) { threw = true; stderr = String(e.stderr || e.message || ''); }
+  assert.ok(threw, 'should exit non-zero on unknown field');
+  assert.match(stderr, /Unknown STATE field/);
+  assert.match(stderr, /next_action/); // error lists the valid fields
+});
+
+test('state update: lenient fields accept free-form; phase must be a positive integer', () => {
+  const cwd = setup({ phases: [] }, [], STATE_FM);
+  assert.strictEqual(runJson(cwd, ['state', 'update', 'next_action', '/fos:ship']).value, '/fos:ship');
+  assert.strictEqual(runJson(cwd, ['state', 'update', 'milestone', 'v2']).value, 'v2');
+  assert.strictEqual(runJson(cwd, ['state', 'update', 'phase', '3']).value, 3);
+  for (const bad of ['', 'x', '0']) {
+    let threw = false, stderr = '';
+    try { run(cwd, ['state', 'update', 'phase', bad]); }
+    catch (e) { threw = true; stderr = String(e.stderr || e.message || ''); }
+    assert.ok(threw, `phase "${bad}" should be rejected`);
+    assert.match(stderr, /Invalid phase|positive integer/);
+  }
 });

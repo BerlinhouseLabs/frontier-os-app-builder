@@ -153,7 +153,7 @@ NOT: "Phase complete" / "Scaffold done" / "Feature implemented"
 - Mark N/A for checks not applicable to this plan
 - All must pass before plan is considered complete
 
-**After creation:** STATE.md updated with position, decisions, metrics.
+**After creation:** the `/fos:execute` orchestrator updates STATE.md (position, decisions, metrics) — the executor does NOT write STATE.md.
 
 </guidelines>
 
