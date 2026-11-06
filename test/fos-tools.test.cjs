@@ -383,3 +383,21 @@ test('state update: lenient fields accept free-form; phase must be a positive in
     assert.match(stderr, /Invalid phase|positive integer/);
   }
 });
+
+test('init execute: Self-Check: FAILED summary is incomplete and retried; PASSED is complete', () => {
+  const cwd = setup(
+    { phases: [] },
+    [{ name: '01-scaffold', files: ['01-01-PLAN.md', '01-02-PLAN.md', '01-03-PLAN.md', '01-01-SUMMARY.md'] }]
+  );
+  const pdir = path.join(cwd, '.frontier-app', 'phases', '01-scaffold');
+  fs.writeFileSync(path.join(pdir, '01-02-SUMMARY.md'), '# S\n\n## Self-Check: FAILED\n- missing foo\n');
+  fs.writeFileSync(path.join(pdir, '01-03-SUMMARY.md'), '# S\n\n## Self-Check: PASSED\n');
+  const out = runJson(cwd, ['init', 'execute', '1']);
+  assert.deepStrictEqual(out.incomplete_plans, ['01-02-PLAN.md']);
+  assert.deepStrictEqual(out.self_check_failed, ['01-02-SUMMARY.md']);
+  assert.strictEqual(out.all_complete, false);
+  // after a passing retry the plan is complete
+  fs.writeFileSync(path.join(pdir, '01-02-SUMMARY.md'), '# S\n\n## Self-Check: PASSED\n');
+  const out2 = runJson(cwd, ['init', 'execute', '1']);
+  assert.strictEqual(out2.all_complete, true);
+});

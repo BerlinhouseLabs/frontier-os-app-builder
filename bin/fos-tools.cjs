@@ -580,6 +580,22 @@ function listSummaries(phaseDir) {
     .sort();
 }
 
+// A SUMMARY.md counts as "complete" unless it records a failed self-check.
+// The executor appends `## Self-Check: FAILED` when its own verification fails;
+// such plans must be retried on rerun, not skipped.
+function summaryIsComplete(phaseDir, summaryFile) {
+  try {
+    const text = fs.readFileSync(path.join(phaseDir, summaryFile), 'utf8');
+    return !/^#{1,6}\s*Self-Check:\s*FAILED\b/mi.test(text);
+  } catch {
+    return false;
+  }
+}
+
+function listCompleteSummaries(phaseDir) {
+  return listSummaries(phaseDir).filter(f => summaryIsComplete(phaseDir, f));
+}
+
 // ── Phase Numbering & SDK-Integration Invariant ──
 //
 // Invariant maintained here: the "SDK Integration" phase is always the LAST
@@ -718,7 +734,7 @@ function cmdAddPhases(cwd, args, flags) {
   let sdkExecuted = false;
   if (sdkEntry) {
     const dir = findPhaseDir(cwd, sdkEntry.number);
-    sdkExecuted = dir ? listSummaries(dir).length > 0 : false;
+    sdkExecuted = dir ? listCompleteSummaries(dir).length > 0 : false;
   }
 
   const featurePhases = [];
@@ -1331,7 +1347,10 @@ function cmdInit(workflow, phaseArg, flags) {
       const phaseDir = findPhaseDir(cwd, phaseArg);
       const plans = phaseDir ? listPlans(phaseDir) : [];
       const summaries = phaseDir ? listSummaries(phaseDir) : [];
-      const completedPlanIds = summaries.map(s => s.replace('-SUMMARY.md', ''));
+      // Summaries recording `Self-Check: FAILED` are NOT complete — they are retried.
+      const completeSummaries = phaseDir ? listCompleteSummaries(phaseDir) : [];
+      const failedSummaries = summaries.filter(s => !completeSummaries.includes(s));
+      const completedPlanIds = completeSummaries.map(s => s.replace('-SUMMARY.md', ''));
       const incompletePlans = plans.filter(p => !completedPlanIds.includes(p.replace('-PLAN.md', '')));
 
       output({
@@ -1339,6 +1358,7 @@ function cmdInit(workflow, phaseArg, flags) {
         phase_dir: phaseDir,
         plans,
         summaries,
+        self_check_failed: failedSummaries,
         incomplete_plans: incompletePlans,
         all_complete: incompletePlans.length === 0,
         manifest,

@@ -29,7 +29,7 @@ INIT=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" init execu
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
-Parse JSON for: `phase`, `phase_dir`, `plans`, `summaries`, `incomplete_plans`, `all_complete`, `manifest`, `state`, `project_path`, `roadmap_path`, `template_home`, `version`.
+Parse JSON for: `phase`, `phase_dir`, `plans`, `summaries`, `self_check_failed`, `incomplete_plans`, `all_complete`, `manifest`, `state`, `project_path`, `roadmap_path`, `template_home`, `version`.
 
 **Generate focused SDK reference for this app's modules:**
 ```bash
@@ -61,6 +61,8 @@ Error: No plans found in Phase [N].
 Run `/fos:plan [N]` first to create execution plans.
 ```
 Exit workflow.
+
+**Note:** a plan whose SUMMARY.md contains `Self-Check: FAILED` is NOT complete. `incomplete_plans` includes it (and `self_check_failed` lists its summary), so rerunning retries it; the executor overwrites the old SUMMARY.md.
 
 **If `all_complete` is true:**
 ```
