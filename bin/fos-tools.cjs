@@ -580,13 +580,19 @@ function listSummaries(phaseDir) {
     .sort();
 }
 
-// A SUMMARY.md counts as "complete" unless it records a failed self-check.
-// The executor appends `## Self-Check: FAILED` when its own verification fails;
-// such plans must be retried on rerun, not skipped.
+// execute-only completion rule (do NOT fold into listSummaries: add-phases uses
+// that for SDK-phase executed-detection, where a FAILED summary must not matter).
+// A SUMMARY.md with `## Self-Check: FAILED` is an unhandled failure -> incomplete
+// (retried on rerun), UNLESS the user accepted the gaps. Acceptance is recorded by
+// /fos:execute as either a `Gaps-Accepted:` line in that SUMMARY.md (plan-level,
+// "Continue anyway") or a `.gaps-accepted` file in the phase dir (phase-level,
+// "Accept with gaps noted").
 function summaryIsComplete(phaseDir, summaryFile) {
   try {
     const text = fs.readFileSync(path.join(phaseDir, summaryFile), 'utf8');
-    return !/^#{1,6}\s*Self-Check:\s*FAILED\b/mi.test(text);
+    if (!/^#{1,6}\s*Self-Check:\s*FAILED\b/mi.test(text)) return true;
+    if (fs.existsSync(path.join(phaseDir, '.gaps-accepted'))) return true;
+    return /^Gaps-Accepted:/mi.test(text);
   } catch {
     return false;
   }
@@ -734,7 +740,7 @@ function cmdAddPhases(cwd, args, flags) {
   let sdkExecuted = false;
   if (sdkEntry) {
     const dir = findPhaseDir(cwd, sdkEntry.number);
-    sdkExecuted = dir ? listCompleteSummaries(dir).length > 0 : false;
+    sdkExecuted = dir ? listSummaries(dir).length > 0 : false;
   }
 
   const featurePhases = [];

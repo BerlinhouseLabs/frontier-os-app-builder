@@ -62,7 +62,7 @@ Run `/fos:plan [N]` first to create execution plans.
 ```
 Exit workflow.
 
-**Note:** a plan whose SUMMARY.md contains `Self-Check: FAILED` is NOT complete. `incomplete_plans` includes it (and `self_check_failed` lists its summary), so rerunning retries it; the executor overwrites the old SUMMARY.md.
+**Note:** a plan whose SUMMARY.md contains `Self-Check: FAILED` is NOT complete unless the user accepted the gaps (a `Gaps-Accepted:` line in the SUMMARY.md, or `.gaps-accepted` in the phase dir). `incomplete_plans` includes it (and `self_check_failed` lists its summary), so rerunning retries it; the executor overwrites the old SUMMARY.md.
 
 **If `all_complete` is true:**
 ```
@@ -210,7 +210,7 @@ fi
    - **self-check-failed:** SUMMARY.md exists but executor detected issues. Read the SUMMARY.md to extract what failed, then ask:
      - "Retry this plan?" — re-spawn the executor
      - "Fix manually?" — exit with pointer to SUMMARY.md
-     - "Continue anyway?" — note the gap for the verifier
+     - "Continue anyway?" — note the gap for the verifier AND record the acceptance so reruns don't retry it: `printf '\nGaps-Accepted: %s\n' "$(date -u +%Y-%m-%d)" >> "$SUMMARY_FILE"`
    - **incomplete:** SUMMARY.md missing after agent returns. Either the agent crashed or hit a checkpoint (see handle_checkpoints step). Report as failed.
 
 4. **Post-wave hook validation (parallel mode):**
@@ -429,7 +429,7 @@ Use AskUserQuestion (if available):
 
 **If "Fix manually":** Exit with message: "Fix the gaps listed in `$VERIFICATION_FILE`, then run `/fos:execute [N]` to re-verify."
 
-**If "Accept with gaps":** Continue to update_state_and_roadmap. Record the phase as **partial** (instead of "complete") in ROADMAP.md and the STATE.md body — do NOT pass "partial" to `state update status`; "partial" is not a valid machine status, so the frontmatter `status` field stays `phase-complete`. Gaps remain documented in VERIFICATION.md.
+**If "Accept with gaps":** First record the acceptance so reruns do not retry self-check-failed plans: `touch "$PHASE_DIR/.gaps-accepted"`. Then continue to update_state_and_roadmap. Record the phase as **partial** (instead of "complete") in ROADMAP.md and the STATE.md body — do NOT pass "partial" to `state update status`; "partial" is not a valid machine status, so the frontmatter `status` field stays `phase-complete`. Gaps remain documented in VERIFICATION.md.
 
 **If AskUserQuestion denied:** Default to "Generate gap-closure plans and re-execute".
 </step>

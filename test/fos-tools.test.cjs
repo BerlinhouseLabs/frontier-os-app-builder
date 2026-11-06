@@ -401,3 +401,18 @@ test('init execute: Self-Check: FAILED summary is incomplete and retried; PASSED
   const out2 = runJson(cwd, ['init', 'execute', '1']);
   assert.strictEqual(out2.all_complete, true);
 });
+
+test('init execute: FAILED summary accepted with gaps (plan marker or phase marker) stays complete', () => {
+  const cwd = setup(
+    { phases: [] },
+    [{ name: '01-scaffold', files: ['01-01-PLAN.md', '01-02-PLAN.md'] }]
+  );
+  const pdir = path.join(cwd, '.frontier-app', 'phases', '01-scaffold');
+  fs.writeFileSync(path.join(pdir, '01-01-SUMMARY.md'), '# S\n\n## Self-Check: FAILED\n\nGaps-Accepted: 2026-11-06\n');
+  fs.writeFileSync(path.join(pdir, '01-02-SUMMARY.md'), '# S\n\n## Self-Check: FAILED\n');
+  let out = runJson(cwd, ['init', 'execute', '1']);
+  assert.deepStrictEqual(out.incomplete_plans, ['01-02-PLAN.md']);
+  fs.writeFileSync(path.join(pdir, '.gaps-accepted'), '');
+  out = runJson(cwd, ['init', 'execute', '1']);
+  assert.strictEqual(out.all_complete, true);
+});
