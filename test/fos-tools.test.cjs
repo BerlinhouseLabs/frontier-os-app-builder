@@ -383,3 +383,83 @@ test('state update: lenient fields accept free-form; phase must be a positive in
     assert.match(stderr, /Invalid phase|positive integer/);
   }
 });
+
+test('init execute: Self-Check: FAILED summary is incomplete and retried; PASSED is complete', () => {
+  const cwd = setup(
+    { phases: [] },
+    [{ name: '01-scaffold', files: ['01-01-PLAN.md', '01-02-PLAN.md', '01-03-PLAN.md', '01-01-SUMMARY.md'] }]
+  );
+  const pdir = path.join(cwd, '.frontier-app', 'phases', '01-scaffold');
+  fs.writeFileSync(path.join(pdir, '01-02-SUMMARY.md'), '# S\n\n## Self-Check: FAILED\n- missing foo\n');
+  fs.writeFileSync(path.join(pdir, '01-03-SUMMARY.md'), '# S\n\n## Self-Check: PASSED\n');
+  const out = runJson(cwd, ['init', 'execute', '1']);
+  assert.deepStrictEqual(out.incomplete_plans, ['01-02-PLAN.md']);
+  assert.deepStrictEqual(out.self_check_failed, ['01-02-SUMMARY.md']);
+  assert.strictEqual(out.all_complete, false);
+  // after a passing retry the plan is complete
+  fs.writeFileSync(path.join(pdir, '01-02-SUMMARY.md'), '# S\n\n## Self-Check: PASSED\n');
+  const out2 = runJson(cwd, ['init', 'execute', '1']);
+  assert.strictEqual(out2.all_complete, true);
+});
+
+function phaseFixture(files) {
+  const cwd = setup({ phases: [] }, [{ name: '01-scaffold', files }]);
+  return { cwd, pdir: path.join(cwd, '.frontier-app', 'phases', '01-scaffold') };
+}
+const age = (f, secs) => { const t = new Date(Date.now() - secs * 1000); fs.utimesSync(f, t, t); };
+
+test('accept-gaps: per-plan acceptance stays complete, later failed plan is still retried', () => {
+  const { cwd, pdir } = phaseFixture(['01-01-PLAN.md', '01-02-PLAN.md']);
+  fs.writeFileSync(path.join(pdir, '01-01-SUMMARY.md'), '# S\n\n## Self-Check: FAILED\n');
+  let out = runJson(cwd, ['accept-gaps', '1']);
+  assert.deepStrictEqual(out.accepted, ['01-01-SUMMARY.md']);
+  assert.match(fs.readFileSync(path.join(pdir, '01-01-SUMMARY.md'), 'utf8'), /^Gaps-Accepted: \d{4}-\d{2}-\d{2}$/m);
+  assert.strictEqual(run(cwd, ['summary-status', path.join(pdir, '01-01-SUMMARY.md'), '--raw']).trim(), 'accepted');
+  // a plan added later (gap closure) fails its self-check: not covered
+  fs.writeFileSync(path.join(pdir, '01-02-SUMMARY.md'), '# S\n\n## Self-Check: FAILED\n');
+  out = runJson(cwd, ['init', 'execute', '1']);
+  assert.deepStrictEqual(out.incomplete_plans, ['01-02-PLAN.md']);
+  assert.strictEqual(run(cwd, ['summary-status', path.join(pdir, '01-02-SUMMARY.md'), '--raw']).trim(), 'failed');
+});
+
+test('summary-status: bold, heading and bare FAILED forms are all detected; PASSED is complete', () => {
+  const { cwd, pdir } = phaseFixture([]);
+  const forms = { '## Self-Check: FAILED': 'failed', '**Self-Check: FAILED**': 'failed', 'Self-Check: FAILED': 'failed', '**Self-Check:** FAILED': 'failed', '## Self-Check: PASSED': 'complete' };
+  for (const [line, want] of Object.entries(forms)) {
+    const f = path.join(pdir, '01-01-SUMMARY.md');
+    fs.writeFileSync(f, `# S\n\n${line}\n`);
+    assert.strictEqual(run(cwd, ['summary-status', f, '--raw']).trim(), want, line);
+  }
+});
+
+test('phase-status agrees with init execute (what next/status use)', () => {
+  const { cwd, pdir } = phaseFixture(['01-01-PLAN.md', '01-02-PLAN.md', '01-03-PLAN.md']);
+  fs.writeFileSync(path.join(pdir, '01-01-SUMMARY.md'), '# S\n\n## Self-Check: PASSED\n');
+  fs.writeFileSync(path.join(pdir, '01-02-SUMMARY.md'), '# S\n\n**Self-Check: FAILED**\n');
+  const ps = runJson(cwd, ['phase-status', '1']);
+  const init = runJson(cwd, ['init', 'execute', '1']);
+  assert.strictEqual(ps.plan_count, 3);
+  assert.strictEqual(ps.summary_count, 2);
+  assert.strictEqual(ps.complete_count, 1);
+  assert.deepStrictEqual(ps.incomplete_plans, init.incomplete_plans);
+  assert.strictEqual(ps.all_complete, init.all_complete);
+  assert.strictEqual(ps.all_complete, false);
+  fs.writeFileSync(path.join(pdir, '01-02-SUMMARY.md'), '# S\n\n## Self-Check: PASSED\n');
+  fs.writeFileSync(path.join(pdir, '01-03-SUMMARY.md'), '# S\n\n## Self-Check: PASSED\n');
+  assert.strictEqual(runJson(cwd, ['phase-status', '1']).all_complete, true);
+  assert.strictEqual(runJson(cwd, ['init', 'execute', '1']).all_complete, true);
+});
+
+test('compat: legacy FAILED summary predating VERIFICATION.md is accepted; newer one is retried', () => {
+  const { cwd, pdir } = phaseFixture(['01-01-PLAN.md', '01-02-PLAN.md', '01-01-SUMMARY.md', '01-02-SUMMARY.md', '01-VERIFICATION.md']);
+  fs.writeFileSync(path.join(pdir, '01-01-SUMMARY.md'), '# S\n\n## Self-Check: FAILED\n');
+  fs.writeFileSync(path.join(pdir, '01-02-SUMMARY.md'), '# S\n\n## Self-Check: FAILED\n');
+  age(path.join(pdir, '01-01-SUMMARY.md'), 100);   // predates verification (legacy accept)
+  age(path.join(pdir, '01-VERIFICATION.md'), 50);
+  // 01-02 written after verification (e.g. gap-closure plan that failed)
+  let out = runJson(cwd, ['init', 'execute', '1']);
+  assert.deepStrictEqual(out.incomplete_plans, ['01-02-PLAN.md']);
+  age(path.join(pdir, '01-02-SUMMARY.md'), 200);
+  out = runJson(cwd, ['init', 'execute', '1']);
+  assert.strictEqual(out.all_complete, true);
+});

@@ -80,13 +80,11 @@ if [ -n "$PHASE_DIR" ]; then
   PLAN_COUNT=$(ls "$PHASE_DIR/"*-PLAN.md 2>/dev/null | wc -l | tr -d ' ')
   test "$PLAN_COUNT" -gt 0 && HAS_PLANS="true"
 
-  # Summary files (completed plans)
-  SUMMARY_COUNT=$(ls "$PHASE_DIR/"*-SUMMARY.md 2>/dev/null | wc -l | tr -d ' ')
-
-  # Check if all plans are done
-  if [ "$PLAN_COUNT" -gt 0 ] && [ "$SUMMARY_COUNT" -ge "$PLAN_COUNT" ]; then
-    ALL_PLANS_DONE="true"
-  fi
+  # Completed plans: same rule as /fos:execute (a SUMMARY.md with an unaccepted
+  # Self-Check: FAILED is NOT complete). Do not count files.
+  FOS="$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs"
+  SUMMARY_COUNT=$(node "$FOS" phase-status "$CURRENT_PHASE" --pick complete_count --raw)
+  ALL_PLANS_DONE=$(node "$FOS" phase-status "$CURRENT_PHASE" --pick all_complete --raw)
 fi
 ```
 
@@ -107,10 +105,10 @@ fi
 5. **No PLAN.md files:**
    -> Suggest `/fos:plan $CURRENT_PHASE`
 
-6. **Plans exist but not all have SUMMARY.md (incomplete execution):**
+6. **Plans exist but not all are complete (missing SUMMARY.md, or unaccepted Self-Check: FAILED):**
    -> Suggest `/fos:execute $CURRENT_PHASE`
 
-7. **All plans have SUMMARY.md (phase complete):**
+7. **All plans complete (`ALL_PLANS_DONE`):**
    -> Check if more phases exist in ROADMAP.md
    -> If yes: Advance to next phase, suggest `/fos:discuss $NEXT_PHASE`
    -> If no: Suggest `/fos:ship`

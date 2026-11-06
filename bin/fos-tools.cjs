@@ -580,6 +580,88 @@ function listSummaries(phaseDir) {
     .sort();
 }
 
+// ── Summary completion status (execute / next / status) ──
+//
+// NOT folded into listSummaries: add-phases uses that for SDK-phase
+// executed-detection, where a FAILED summary must not matter.
+//
+// summaryStatus(file) -> 'complete' | 'failed' | 'accepted'
+//   complete: no Self-Check: FAILED recorded
+//   failed:   Self-Check: FAILED and no acceptance -> unhandled, retried on rerun
+//   accepted: Self-Check: FAILED but the user accepted the gaps. Acceptance is
+//             per plan: a `Gaps-Accepted:` line in that SUMMARY.md, written by
+//             `fos-tools accept-gaps`. Backward compat: before that marker existed,
+//             accepting gaps wrote nothing, but the flow only reached
+//             VERIFICATION.md after every plan was handled, so a FAILED summary
+//             that is NOT newer than its phase's VERIFICATION.md predates the
+//             verification and is treated as accepted. A retry or a later plan
+//             rewrites/creates a newer summary, so it is judged on its own.
+// One pattern for every caller: heading, bold or bare form at line start.
+const SELF_CHECK_FAILED_RE = /^[ \t]*(?:#{1,6}[ \t]*)?(?:\*\*|__)?Self-Check:(?:\*\*|__)?[ \t]*(?:\*\*|__)?FAILED\b/mi;
+
+function summaryStatus(summaryPath) {
+  let text, mtime;
+  try {
+    text = fs.readFileSync(summaryPath, 'utf8');
+    mtime = fs.statSync(summaryPath).mtimeMs;
+  } catch {
+    return 'failed';
+  }
+  if (!SELF_CHECK_FAILED_RE.test(text)) return 'complete';
+  if (/^Gaps-Accepted:/mi.test(text)) return 'accepted';
+  const dir = path.dirname(summaryPath);
+  try {
+    const verif = fs.readdirSync(dir).find(f => /^\d{2,}-VERIFICATION\.md$/.test(f));
+    if (verif && fs.statSync(path.join(dir, verif)).mtimeMs >= mtime) return 'accepted';
+  } catch { /* fall through */ }
+  return 'failed';
+}
+
+function phaseCompletion(phaseDir) {
+  const plans = phaseDir ? listPlans(phaseDir) : [];
+  const summaries = phaseDir ? listSummaries(phaseDir) : [];
+  const failed = summaries.filter(f => summaryStatus(path.join(phaseDir, f)) === 'failed');
+  const done = new Set(summaries.filter(f => !failed.includes(f)).map(f => f.replace('-SUMMARY.md', '')));
+  const incompletePlans = plans.filter(p => !done.has(p.replace('-PLAN.md', '')));
+  return { plans, summaries, failed, incompletePlans };
+}
+
+function cmdSummaryStatus(file, flags) {
+  if (!file) error('Usage: summary-status <path-to-SUMMARY.md>');
+  if (!fs.existsSync(file)) error(`Summary not found: ${file}`);
+  const status = summaryStatus(file);
+  output(flags.raw ? status : { summary: file, status }, flags);
+}
+
+function cmdPhaseStatus(cwd, phaseArg, flags) {
+  if (!phaseArg) error('Usage: phase-status <phase>');
+  const phaseDir = findPhaseDir(cwd, phaseArg);
+  const { plans, summaries, failed, incompletePlans } = phaseCompletion(phaseDir);
+  output({
+    phase: parseInt(phaseArg),
+    phase_dir: phaseDir,
+    plan_count: plans.length,
+    summary_count: summaries.length,
+    complete_count: plans.length - incompletePlans.length,
+    self_check_failed: failed,
+    incomplete_plans: incompletePlans,
+    all_complete: plans.length > 0 && incompletePlans.length === 0
+  }, flags);
+}
+
+// accept-gaps <phase> [summary-file ...]: stamp `Gaps-Accepted:` into each currently
+// FAILED summary (or just the named ones). Later plans are not covered.
+function cmdAcceptGaps(cwd, phaseArg, names, flags) {
+  if (!phaseArg) error('Usage: accept-gaps <phase> [SUMMARY.md ...]');
+  const phaseDir = findPhaseDir(cwd, phaseArg);
+  if (!phaseDir) error(`Phase ${phaseArg} not found`);
+  const { failed } = phaseCompletion(phaseDir);
+  const targets = names.length ? failed.filter(f => names.some(n => path.basename(n) === f)) : failed;
+  const date = new Date().toISOString().slice(0, 10);
+  for (const f of targets) fs.appendFileSync(path.join(phaseDir, f), `\nGaps-Accepted: ${date}\n`);
+  output({ accepted: targets, files: targets.map(f => path.join(phaseDir, f)) }, flags);
+}
+
 // ── Phase Numbering & SDK-Integration Invariant ──
 //
 // Invariant maintained here: the "SDK Integration" phase is always the LAST
@@ -1329,16 +1411,14 @@ function cmdInit(workflow, phaseArg, flags) {
       const manifest = loadManifest(cwd);
       const state = loadState(cwd);
       const phaseDir = findPhaseDir(cwd, phaseArg);
-      const plans = phaseDir ? listPlans(phaseDir) : [];
-      const summaries = phaseDir ? listSummaries(phaseDir) : [];
-      const completedPlanIds = summaries.map(s => s.replace('-SUMMARY.md', ''));
-      const incompletePlans = plans.filter(p => !completedPlanIds.includes(p.replace('-PLAN.md', '')));
+      const { plans, summaries, failed: failedSummaries, incompletePlans } = phaseCompletion(phaseDir);
 
       output({
         phase: parseInt(phaseArg),
         phase_dir: phaseDir,
         plans,
         summaries,
+        self_check_failed: failedSummaries,
         incomplete_plans: incompletePlans,
         all_complete: incompletePlans.length === 0,
         manifest,
@@ -1433,6 +1513,9 @@ Commands:
   state json                       STATE.md frontmatter as JSON
   state update <field> <value>     Update STATE.md field
   state get <field>                Get STATE.md field
+  summary-status <file>            Plan summary status: complete | failed | accepted
+  phase-status <N>                 Plan completion for a phase (self-check aware)
+  accept-gaps <N> [SUMMARY.md...]  Record Gaps-Accepted: in currently FAILED summaries
   find-phase <N>                   Find phase directory by number
   next-phase                       Print the next phase number (max existing + 1)
   add-phases --names '[..]'        Add feature phase(s), keep SDK Integration last
@@ -1469,6 +1552,18 @@ Commands:
         case 'get': cmdStateGet(cwd, rest[1], flags); break;
         default: error('Unknown state subcommand. Valid: load, json, update, get');
       }
+      break;
+
+    case 'summary-status':
+      cmdSummaryStatus(rest[0], flags);
+      break;
+
+    case 'phase-status':
+      cmdPhaseStatus(cwd, rest[0], flags);
+      break;
+
+    case 'accept-gaps':
+      cmdAcceptGaps(cwd, rest[0], rest.slice(1), flags);
       break;
 
     case 'find-phase':

@@ -61,7 +61,8 @@ for PHASE_DIR in "$PHASES_DIR"/*/; do
   CONTEXT=$(test -f "$PHASE_DIR/${PHASE_NUM}-CONTEXT.md" && echo "yes" || echo "no")
   RESEARCH=$(test -f "$PHASE_DIR/${PHASE_NUM}-RESEARCH.md" && echo "yes" || echo "no")
   PLANS=$(ls "$PHASE_DIR/"*-PLAN.md 2>/dev/null | wc -l | tr -d ' ')
-  SUMMARIES=$(ls "$PHASE_DIR/"*-SUMMARY.md 2>/dev/null | wc -l | tr -d ' ')
+  # complete plans per the shared self-check-aware rule (not a file count)
+  SUMMARIES=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" phase-status "$((10#$PHASE_NUM))" --pick complete_count --raw)
 
   echo "$PHASE_NUM|$PHASE_NAME|$CONTEXT|$RESEARCH|$PLANS|$SUMMARIES"
 done
@@ -70,9 +71,9 @@ done
 **Determine phase status from artifacts:**
 - No context, no plans: "Not started"
 - Context exists, no plans: "Discussed"
-- Plans exist, no summaries: "Planned"
-- Some summaries: "In progress ([done]/[total])"
-- All summaries: "Complete"
+- Plans exist, no complete plans: "Planned"
+- Some complete plans: "In progress ([done]/[total])" (a plan with an unaccepted Self-Check: FAILED is not done)
+- All plans complete: "Complete"
 </step>
 
 <step name="display_status">
