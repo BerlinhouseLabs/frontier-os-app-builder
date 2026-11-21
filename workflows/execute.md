@@ -29,7 +29,7 @@ INIT=$(node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" init execu
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
-Parse JSON for: `phase`, `phase_dir`, `plans`, `summaries`, `incomplete_plans`, `all_complete`, `manifest`, `state`, `project_path`, `roadmap_path`, `template_home`, `version`.
+Parse JSON for: `phase`, `phase_dir`, `plans`, `summaries`, `self_check_failed`, `incomplete_plans`, `all_complete`, `manifest`, `state`, `project_path`, `roadmap_path`, `template_home`, `version`.
 
 **Generate focused SDK reference for this app's modules:**
 ```bash
@@ -61,6 +61,10 @@ Error: No plans found in Phase [N].
 Run `/fos:plan [N]` first to create execution plans.
 ```
 Exit workflow.
+
+**Note:** a plan whose SUMMARY.md has a `Self-Check: FAILED` heading (or bold form) is NOT complete unless its gaps were accepted: a `Gaps-Accepted:` line in that SUMMARY.md, written per plan by `fos-tools accept-gaps`. `incomplete_plans` includes it (and `self_check_failed` lists its summary), so rerunning retries it; the executor overwrites the old SUMMARY.md. `/fos:next` and `/fos:status` use the same rule via `fos-tools phase-status`.
+
+**Backward compatibility:** projects that accepted gaps before the `Gaps-Accepted:` marker existed have no marker. A FAILED summary that is not newer than the phase's `NN-VERIFICATION.md` was handled before verification ran, so it is treated as accepted (no re-run of accepted work). A retried or later (gap-closure) plan writes a newer summary and is judged on its own. To force a retry of an old failure, delete or re-run that plan's SUMMARY.md.
 
 **If `all_complete` is true:**
 ```
@@ -197,18 +201,18 @@ fi
    SUMMARY_FILE="$PHASE_DIR/[plan_prefix]-SUMMARY.md"
    if [ ! -f "$SUMMARY_FILE" ]; then
      echo "incomplete"
-   elif grep -q "Self-Check: FAILED" "$SUMMARY_FILE"; then
-     echo "self-check-failed"
    else
-     echo "complete"
+     # complete | failed | accepted — same rule as init/next/status (heading or bold form)
+     node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" summary-status "$SUMMARY_FILE" --raw
    fi
    ```
 
    - **complete:** SUMMARY.md exists, self-check passed, git log shows recent commits. Treat as successful.
-   - **self-check-failed:** SUMMARY.md exists but executor detected issues. Read the SUMMARY.md to extract what failed, then ask:
+   - **accepted:** an earlier run recorded `Gaps-Accepted:`. Treat as successful.
+   - **failed (self-check-failed):** SUMMARY.md exists but executor detected issues. Read the SUMMARY.md to extract what failed, then ask:
      - "Retry this plan?" — re-spawn the executor
      - "Fix manually?" — exit with pointer to SUMMARY.md
-     - "Continue anyway?" — note the gap for the verifier
+     - "Continue anyway?" — note the gap for the verifier AND record the acceptance for this plan so reruns don't retry it: `node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" accept-gaps "$PHASE" "$SUMMARY_FILE"` (the marker lives in `.frontier-app/` and is committed with the phase-complete commit)
    - **incomplete:** SUMMARY.md missing after agent returns. Either the agent crashed or hit a checkpoint (see handle_checkpoints step). Report as failed.
 
 4. **Post-wave hook validation (parallel mode):**
@@ -427,7 +431,7 @@ Use AskUserQuestion (if available):
 
 **If "Fix manually":** Exit with message: "Fix the gaps listed in `$VERIFICATION_FILE`, then run `/fos:execute [N]` to re-verify."
 
-**If "Accept with gaps":** Continue to update_state_and_roadmap. Record the phase as **partial** (instead of "complete") in ROADMAP.md and the STATE.md body — do NOT pass "partial" to `state update status`; "partial" is not a valid machine status, so the frontmatter `status` field stays `phase-complete`. Gaps remain documented in VERIFICATION.md.
+**If "Accept with gaps":** First record the acceptance so reruns do not retry self-check-failed plans: `node "$HOME/.claude/frontier-os-app-builder/bin/fos-tools.cjs" accept-gaps "$PHASE"` (stamps `Gaps-Accepted:` into each currently FAILED summary of this phase only; plans added later are judged on their own). Then continue to update_state_and_roadmap. Record the phase as **partial** (instead of "complete") in ROADMAP.md and the STATE.md body — do NOT pass "partial" to `state update status`; "partial" is not a valid machine status, so the frontmatter `status` field stays `phase-complete`. Gaps remain documented in VERIFICATION.md.
 
 **If AskUserQuestion denied:** Default to "Generate gap-closure plans and re-execute".
 </step>
