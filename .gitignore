@@ -1,0 +1,7 @@
+# Dependencies
+node_modules
+
+# Claude Code (local only)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/launch.json

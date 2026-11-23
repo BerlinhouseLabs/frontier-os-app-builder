@@ -1,6 +1,8 @@
 # Frontier OS App Builder
 
 [![npm version](https://img.shields.io/npm/v/frontier-os-app-builder.svg)](https://www.npmjs.com/package/frontier-os-app-builder)
+[![CI main](https://github.com/BerlinhouseLabs/frontier-os-app-builder/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/BerlinhouseLabs/frontier-os-app-builder/actions/workflows/ci.yml)
+[![CI staging](https://github.com/BerlinhouseLabs/frontier-os-app-builder/actions/workflows/ci.yml/badge.svg?branch=staging)](https://github.com/BerlinhouseLabs/frontier-os-app-builder/actions/workflows/ci.yml)
 
 A meta-prompting framework for building [Frontier OS](https://os.frontiertower.io) apps with [Claude Code](https://claude.ai/code). Provides a guided workflow from idea to deployed app, with built-in knowledge of the Frontier SDK, app patterns, and deployment requirements.
 
@@ -167,6 +169,23 @@ Ideas to get started:
 | Event Organizer | Create and manage community events | Events, Communities, User |
 | Sponsor Dashboard | Manage partnership passes | Partnerships, User |
 
+## Development
+
+Node 22 (see `.nvmrc`). The installer has no dependencies; Frontier Studio (`studio/`) is a separate package.
+
+```bash
+npm test                              # installer and fos-tools tests (node --test)
+cd studio && npm ci && npm run build && npm test
+```
+
+## Releases and rollback
+
+Published to npm by hand (`npm publish`; `prepublishOnly` sanity-checks the installer). Merging to `staging` or `main` runs CI only. To roll back a bad release, publish a fixed patch version and `npm deprecate frontier-os-app-builder@<bad-version> "use <fixed-version>"`.
+
+## Where it fits
+
+It generates apps on [frontier-sdk](https://github.com/BerlinhouseLabs/frontier-sdk), based on templates from existing Frontier OS apps, and `/fos:ship` deploys them to Vercel and registers them in the Frontier app store. See [the org repo index](https://github.com/BerlinhouseLabs/berlinhouse-labs/blob/staging/index/repos.md) for the other repos.
+
 ## License
 
-MIT
+MIT, see [LICENSE](./LICENSE).
