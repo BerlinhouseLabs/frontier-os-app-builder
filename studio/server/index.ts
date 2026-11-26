@@ -10,7 +10,7 @@ import { ViteManager, type ViteStatus } from './vite-manager.js';
 import { ActivityTracker } from './activity.js';
 import { PtyManager } from './pty-manager.js';
 import { discoverApps } from './app-discovery.js';
-import type { ActivityEvent, AppSummary } from '../shared/types.js';
+import type { ActivityEvent } from '../shared/types.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 

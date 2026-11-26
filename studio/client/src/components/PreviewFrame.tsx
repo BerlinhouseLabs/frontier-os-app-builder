@@ -86,7 +86,7 @@ function IphoneFrame({ phone, children }: { phone: PhoneSize; children: ReactNod
  * stacked on the right side. Top-center hole-punch camera. Slim gesture
  * pill at the bottom.
  */
-function AndroidFrame({ phone, children }: { phone: PhoneSize; children: ReactNode }) {
+function AndroidFrame({ children }: { children: ReactNode }) {
   const padding = 8;
   const outerRadius = '1.75rem';
   const innerRadius = '1.5rem';
@@ -119,7 +119,7 @@ function AndroidFrame({ phone, children }: { phone: PhoneSize; children: ReactNo
 
 function PhoneFrame({ phone, children }: { phone: PhoneSize; children: ReactNode }) {
   if (phone.kind === 'android') {
-    return <AndroidFrame phone={phone}>{children}</AndroidFrame>;
+    return <AndroidFrame>{children}</AndroidFrame>;
   }
   return <IphoneFrame phone={phone}>{children}</IphoneFrame>;
 }

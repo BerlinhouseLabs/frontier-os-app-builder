@@ -21,6 +21,9 @@ jobs:
       - name: Studio install
         run: npm ci
         working-directory: studio
+      - name: Studio lint
+        run: npm run lint
+        working-directory: studio
       - name: Studio build
         run: npm run build
         working-directory: studio
