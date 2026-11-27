@@ -56,12 +56,9 @@ export function useToasts() {
 
   // Cleanup timers on unmount
   useEffect(() => {
-    // The Maps are created once and never reassigned, so capturing them here is safe.
-    const timers = timersRef.current;
-    const exitTimers = exitTimersRef.current;
     return () => {
-      for (const timer of timers.values()) clearTimeout(timer);
-      for (const timer of exitTimers.values()) clearTimeout(timer);
+      for (const timer of timersRef.current.values()) clearTimeout(timer);
+      for (const timer of exitTimersRef.current.values()) clearTimeout(timer);
     };
   }, []);
 

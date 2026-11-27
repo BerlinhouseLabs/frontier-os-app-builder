@@ -66,7 +66,7 @@ export function App() {
     appsAtCreationRef.current = new Set(apps.map(a => a.path));
     const interval = setInterval(() => refreshApps(), 3000);
     return () => clearInterval(interval);
-  }, [creatingApp, createCommand, refreshApps]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [creatingApp, createCommand, refreshApps]);
 
   useEffect(() => {
     if (!(creatingApp && createCommand)) return;

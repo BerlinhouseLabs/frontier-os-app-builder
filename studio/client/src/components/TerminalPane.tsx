@@ -171,7 +171,6 @@ export const TerminalPane = forwardRef<TerminalPaneHandle, TerminalPaneProps>(
         wsRef.current = null;
       };
       // Mount-only — TerminalPane is conditionally rendered, so a fresh mount means a fresh PTY.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Refit when visibility toggles (in case the pane was hidden during a window resize)
