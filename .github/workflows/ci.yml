@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [staging, main]
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: studio/package-lock.json
+      - name: Installer tests
+        run: npm test
+      - name: Studio install
+        run: npm ci
+        working-directory: studio
+      - name: Studio build
+        run: npm run build
+        working-directory: studio
+      - name: Studio tests
+        run: npm test
+        working-directory: studio
