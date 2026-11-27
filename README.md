@@ -9,7 +9,7 @@ A meta-prompting framework for building [Frontier OS](https://os.frontiertower.i
 ## Prerequisites
 
 - [Claude Code](https://claude.ai/code) installed
-- Node.js 18+
+- Node.js 18+ for the installer; Node.js 22.22+ for Frontier Studio (`studio/`)
 
 ## Install
 

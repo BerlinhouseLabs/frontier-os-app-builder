@@ -5,6 +5,9 @@
   "author": "BerlinhouseLabs",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=22.22"
+  },
   "bin": {
     "frontier-studio": "./bin/studio.js"
   },
